@@ -8,7 +8,17 @@ import pandas as pd
 import pickle
 
 
-
+'''
+Hamilton class:
+    takes univariate or multivariate time seris, apply a hamilton filter and kim smoother
+    and compute the filtered and smoothed probablity regimes.
+    if data is used to compute filter params (training data), the kim smoother is used since
+    it s supposed we have access to all data.
+    
+    if a new test data is given to predict new regime probabilites, we suppose we don't have 
+    access to all the time series but only to present observations, so the kim smoother is not
+    applied but the trained params and last probablity are used to infer new probablities.
+'''
 
 
 class HamiltonKimModel:
@@ -17,19 +27,19 @@ class HamiltonKimModel:
         if data.ndim == 1:  # Univariate time series
             data = data[np.newaxis, :]  # Convert to 2D array with one row
         self.lag = lag
-        self.y = data[:, 1:]  # Include all elements except the first one for each series
+        self.y = data[:, 1:]  # Include all elements except the first one for each series, to have a lagged element
         if self.lag:
-            self.x = data[:, :-1]  # Include all elements except the last one for each series
+            self.x = data[:, :-1]  # Include all elements except the last one for each series for lagged data 
         self.param = None
 
 
     
     def hamilton_filter(self, param=None, new_obs=None):
-        # Use fitted parameters if param is not provided
+        # if param is not provided, this mean we are not optimizing but just predicting new prob on new data (test set)
         if param is None:
               param = self.param
         
-        # Update initial probabilities if new observations are provided
+        # if new observations are provided use it as the time series, and use the params to get initial first states probs.
         if new_obs is not None:
             
             n_series = self.y.shape[0]
@@ -43,7 +53,8 @@ class HamiltonKimModel:
             E0_t, E1_t = initial_probs
 
         n_series = self.y.shape[0]
-
+        
+        # retrieve the params: const, mu and sigma
         if self.lag:
             const = param[:n_series*2].reshape(n_series, 2)
             beta = param[n_series*2:n_series*4].reshape(n_series, 2)
@@ -61,7 +72,8 @@ class HamiltonKimModel:
         p11 = 1 / (1 + np.exp(-p8))
         p01 = 1 - p00
         p10 = 1 - p11
-
+        
+        # if computing params (training) initiate the  first states probs
         if new_obs is None:
             
             E1_t = (1 - p00) / (2 - p11 - p00)
@@ -204,10 +216,16 @@ class HamiltonKimModel:
 
 
 
+'''
+Group_macro_by_Class:
+    this class is used to group macro data by groupe: 10 groupes including a groupe of all data(no grouping).
+    it perform Pca on each group and yield the first component of each Pca groupe of macro
+    Outpout a dictionnary of (groupe: PC1)
+    it can also be used to retrieve data and plot PC1
+    '''
 
 
-
-class Group_macro_by_Class:
+class Group_macro_Pca:
 
     def __init__(self, data1):
 
@@ -341,14 +359,20 @@ class Group_macro_by_Class:
         plt.grid(True)
 
 
+
+'''
+Thsi class takes the macro data uses the Group_macro_pca to get the pca of each group, apply the hamilton filter class
+on each PC1 group and get the smoothed prob for training_val data and filtered probablities of regimes for the test set.
+'''
+
 class Macro_group_probs:
     def __init__(self, path_val_tr, path_test, all_groups = True):
         
         data_tr = pd.read_csv(path_val_tr)
         data_test = pd.read_csv(path_test)
 
-        group_data_tr= Group_macro_by_Class(data_tr)
-        group_data_test = Group_macro_by_Class(data_test)
+        group_data_tr= Group_macro_Pca(data_tr)
+        group_data_test = Group_macro_Pca(data_test)
         
         data_pca_tr, _ = group_data_tr.get_Pca('scaled')
         data_pca_test, _ = group_data_test.get_Pca('scaled')
