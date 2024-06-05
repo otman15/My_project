@@ -3,18 +3,31 @@
 Created on Tue May 28 01:19:34 2024
 
 @author: Otman CH
+
+This class implements a Feed-Forward Neural Network (FFN_1) using PyTorch for regression prediction tasks. 
+It includes methods for defining the network architecture, forward propagation, and model training 
+with early stopping based on validation loss. 
+The network architecture consists of multiple fully connected layers with ReLU activation and dropout 
+for regularization. The training method utilizes the AdamW optimizer and Mean Squared Error loss,
+and tracks metrics such as Sharpe ratio and R^2 for train, validation, and test sets.
+
+
 """
 
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from util import *
+from util import sharp, R2
 import time
+
+
 
 class FFN_1(nn.Module):
     def __init__(self, model_params):
         super(FFN_1, self).__init__()
+        
+        # Define the network architecture
         self._individual_feature_dim = model_params['feature_dim']
         self._dropout = model_params['dropout']
         self.model_params = model_params
@@ -29,10 +42,9 @@ class FFN_1(nn.Module):
         self.dropout = nn.Dropout(self._dropout)
         self.criterion =  nn.MSELoss()
         self.best_params = None
-       # init.normal_(self.fc2.bias, mean=0.0, std=0.1)
-       # init.uniform_(self.fc3.bias, a=0.0, b=1.0)
 
 
+    # Define the forward propagation
     def forward(self, x):
 
 
@@ -51,16 +63,16 @@ class FFN_1(nn.Module):
 
 
 
-
+    # train the model for each group of data
     def train_model(self, device , groupe,seed,model, model_params, train_data, valid_data, test_set = None,
                       printFreq=100, max_patience = 100):
-
+        
+        # paramters initialization and data preparation for input layer
         
         self.best_val_loss = float('inf')
         patience=0
         optimizer = optim.AdamW(model.parameters(), lr=model_params['learning_rate'], betas=(0.9, 0.99),weight_decay=0.0001) ####0.001#############
-        #pred_train = []
-        #pred_val = []
+
         
         XV, YV, mask_val = valid_data
         XT, YT, mask_tr = train_data
@@ -79,6 +91,8 @@ class FFN_1(nn.Module):
         
     
         start_time = time.time()
+        
+        # training using forward backward propagation
         for epoch in range(model_params['num_epochs']):
                   
             model.train()
@@ -95,43 +109,36 @@ class FFN_1(nn.Module):
             model.eval()
             with torch.no_grad():
                 Ytr_pred = model(Xtrain_m)
-    
-                #pred_train.append(R_pred.detach().numpy())
+
         
                 loss = self.criterion(Ytr_pred, Ytrain[mask_tr])
         
                 train_epoch_loss = loss.item()
                
-             
-           
-            #train_epoch_loss = total_loss #/ total_samples
+
             
             model.eval()
-            #total_loss = 0
-            #total_samples = 0
+
             with torch.no_grad():
     
                 
                 Y_pred_val = model(X_valid_m)
-    
-                #pred_val.append(R_pred.detach().numpy())
+
                 valid_epoch_loss = self.criterion(Y_pred_val, Y_valid[mask_val])
-                #valid_epoch_loss = loss.item()
-                #total_samples += 1  
-           
+
             if test_set :
                 with torch.no_grad():    
                    Y_pred_test = model(Xtest_m)
         
-                   sharp_test = evaluate_sharp(Y_pred_test.detach().cpu().numpy(),Ytest,mask_test)
+                   sharp_test = sharp(Y_pred_test.detach().cpu().numpy(),Ytest,mask_test)
                    test_epoch_loss = self.criterion(Y_pred_test, Ytest[mask_test])
                    r2_test = R2(Ytest[mask_test], Ytest[mask_test]- Y_pred_test.detach().cpu().numpy(),cross_sectional=False)
             
-            sharp_train = evaluate_sharp(Ytr_pred.detach().cpu().numpy(),YT,mask_tr)
-            sharp_valid = evaluate_sharp(Y_pred_val.detach().cpu().numpy(), YV, mask_val)
+            sharp_train = sharp(Ytr_pred.detach().cpu().numpy(),YT,mask_tr)
+            sharp_valid = sharp(Y_pred_val.detach().cpu().numpy(), YV, mask_val)
             r2_train = R2(YT[mask_tr], YT[mask_tr]- Ytr_pred.detach().cpu().numpy(),cross_sectional=False)
             r2_val = R2(YV[mask_val], YV[mask_val] - Y_pred_val.detach().cpu().numpy(),cross_sectional=False)
-            #alid_epoch_loss = total_loss# / total_samples
+
             
             
                 
@@ -175,13 +182,33 @@ class FFN_1(nn.Module):
     
     def get_best_val_loss(self):
         return self.best_val_loss
-    
-    def compute_l1_loss(self):
-        l1_loss = 0
-        for param in self.parameters():
-            l1_loss += torch.sum(torch.abs(param))
-        return l1_loss
-    
-    
 
+
+'''
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class FFN_1(nn.Module):
+    def __init__(self, input_size, hidden_sizes, output_size, dropout_rate=0.5):
+        super(FFN_1, self).__init__()
+        
+        # Define the network architecture
+        self.hidden_layers = nn.ModuleList()
+        last_size = input_size
+        for hidden_size in hidden_sizes:
+            self.hidden_layers.append(nn.Linear(last_size, hidden_size))
+            last_size = hidden_size
+        
+        self.output_layer = nn.Linear(last_size, output_size)
+        self.dropout = nn.Dropout(dropout_rate)
+    
+    # Define the forward propagation
+    def forward(self, x):
+        for layer in self.hidden_layers:
+            x = F.relu(layer(x))
+            x = self.dropout(x)
+        x = self.output_layer(x)
+        return x
+'''
     

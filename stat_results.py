@@ -6,7 +6,7 @@ Created on Mon Jun  3 16:32:53 2024
 """
 
 import pickle
-from util import evaluate_sharp,construct_decile_portfolios,long_short_portfolio,calculateStatisticsDecile3
+from util import sharp, decile_portfolios,long_short_portfolio,DecileStatistics
 from Load_data import Load_data
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -40,13 +40,13 @@ for groupe in groupes:
       with open(f'final_results/results/{groupe}_pred.pkl', 'rb') as f:
         if groupe == 'all_groups' : pred = pickle.load(f)
         else :                      pred = pickle.load(f)
-      sharps[groupe] = evaluate_sharp(pred,Ytest,mask)
-      decile_portf_on_ret[groupe] = construct_decile_portfolios(pred, Ytest, mask, deciles=10)[0]
+      sharps[groupe] = sharp(pred,Ytest,mask)
+      decile_portf_on_ret[groupe] = decile_portfolios(pred, Ytest, mask, deciles=10)[0]
       ls_returns[groupe] = long_short_portfolio(pred, Ytest, mask, low=0.1, high=0.1, normalize=True)
     
       var2idx = {var:idx for idx, var in enumerate(char_names)}
       char_mask= Xtest[:,var2idx[sorting_var]]
-      stat_sorted[groupe] = calculateStatisticsDecile3(char_mask, Ytest, pred, mask, decile=10)
+      stat_sorted[groupe] = DecileStatistics(char_mask, Ytest, pred, mask, decile=10)
     
       del data, Xtest, mask, Ytest, pred
       

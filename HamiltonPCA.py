@@ -221,8 +221,8 @@ Group_macro_by_Class:
     this class is used to group macro data by groupe: 10 groupes including a groupe of all data(no grouping).
     it perform Pca on each group and yield the first component of each Pca groupe of macro
     Outpout a dictionnary of (groupe: PC1)
-    it can also be used to retrieve data and plot PC1
-    '''
+    it can also retrieve data and plot PC1
+'''
 
 
 class Group_macro_Pca:
@@ -361,8 +361,9 @@ class Group_macro_Pca:
 
 
 '''
-Thsi class takes the macro data uses the Group_macro_pca to get the pca of each group, apply the hamilton filter class
-on each PC1 group and get the smoothed prob for training_val data and filtered probablities of regimes for the test set.
+Thsi class takes as inpout the macro data, uses the Group_macro_pca class to get the pca of each group, apply the hamilton 
+filter class on each time series of PC1 group and get the smoothed regime prob for training_val data and filtered probablities 
+of regimes  for the test set.
 '''
 
 class Macro_group_probs:
@@ -377,13 +378,13 @@ class Macro_group_probs:
         data_pca_tr, _ = group_data_tr.get_Pca('scaled')
         data_pca_test, _ = group_data_test.get_Pca('scaled')
         
-        
+        # If must use the 9 PC1 times series in a multivariate hamilton filter create data with the 9 time series goups
         if all_groups:
             all_tr = []
             all_test = []
             for gr in data_pca_tr.keys():
                 
-              if gr != 'all_vars':
+              if gr != 'all_vars': # all vars means all data so it s not a groupe.
                 all_tr.append(data_pca_tr[gr])
                 all_test.append(data_pca_test[gr])
                 
@@ -398,14 +399,14 @@ class Macro_group_probs:
 
         for groupe in data_pca_tr.keys():
             
-            model = HamiltonKimModel(data_pca_tr[groupe])
-            model.run()
+            model = HamiltonKimModel(data_pca_tr[groupe]) 
+            model.run() # run hamilton filter for each groupe of PC1 and also for the 9 PC1 of all the groups
             
-            results_tr = model.get_sp_hf()
-            smoothed_prob_tr = results_tr['smoothed_prob']
-            smoothed_prob_tr = np.concatenate(([smoothed_prob_tr[:, 0][0]], smoothed_prob_tr[:, 0]))
+            results_tr = model.get_sp_hf() 
+            smoothed_prob_tr = results_tr['smoothed_prob'] # smoothed prob for train valid data
+            smoothed_prob_tr = np.concatenate(([smoothed_prob_tr[:, 0][0]], smoothed_prob_tr[:, 0])) # the filter doesnt yild the first prob so we make it equal as the second
             
-            results_test= model.hamilton_filter(param=None,new_obs=data_pca_test[groupe])
+            results_test= model.hamilton_filter(param=None,new_obs=data_pca_test[groupe]) # get filterd probabilites for test set macro
             filtered_prob_test= results_test['fp'][:, 0]
             #####filtered_prob_test = np.concatenate(([filtered_prob_test[:, 0][0]], filtered_prob_test[:, 0]))
             
@@ -422,7 +423,11 @@ class Macro_group_probs:
     def get_group_prob(self):
         return self.prob_tr,self.prob_test
     
-    
+
+'''
+this function run group data run pca on groupes and run hamilton filter on each group and all groups,
+it get macro prob associated with each case
+'''
         
 def run_Hamilton_filter():
     macro_tr = np.load('datasets/macro/macro_train.npz')
@@ -440,17 +445,19 @@ def run_Hamilton_filter():
     test_macro.index.name = 'Date'
     
     train_val_macro = pd.concat([df_train, df_val], axis=0)
-    train_val_macro.to_csv('train_val_macro.csv')
-    test_macro.to_csv('test_macro.csv')
+    train_val_macro.to_csv('datasets/train_val_macro.csv')
+    test_macro.to_csv('datasets/test_macro.csv')
     
     
     
-    tr_val_macro_path = 'train_val_macro.csv'
-    test_macro_path = 'test_macro.csv'
+    tr_val_macro_path = 'datasets/train_val_macro.csv'
+    test_macro_path = 'datasets/test_macro.csv'
+    
     hamilton = Macro_group_probs(tr_val_macro_path,test_macro_path, all_groups= True)
     prob_tr_val, prob_test = hamilton.get_group_prob()
     hamilton.write_to_file('macro_probabilities') 
     
+    
    
     
-    
+#to write prob of files run : run_Hamilton_filter()   
