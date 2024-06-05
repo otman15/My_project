@@ -1,0 +1,13 @@
+This project is a part of my master's degree. The idea is to use macro data with characteristics to predict assets return. We use the data processed by Chen et (2023). We use a markov chain switching regime to detect the probabilities of the regimes of the economy. We use the Hamilton filter for this purpose. Add math and explication for Hamilton filter, kim smooting here: ************************************* We classify the macro data into 9 groups, perform PCA on those groups as well as on initial data without grouping to get 10 first principal components (PC1 of each group and the PC1 of the initial data without grouping).
+
+We combine those probabilities along with assets characteristics to predict monthly asset return. We use a Feed Forward Network. We feed the network with a matrix containing the characteristics, the probabilities, and the product of the characterstics with the probablities to take into account non linear interactions between charcterstics and regimes. Y(t) = f(x(t), p, p.x(t))
+
+We experiment using the 10 PC1 of the groups of macro data. At each time we combine one group with the characteristics and train our model, we train our model without macro groups as well, so in fact we train the model with 11 diffrent data.
+
+So our models are : Y_i(t) = f(x(t), p_i, p_i.x(t)) where P_i = PC1(ith macro groups) for i (1...10) and P_i = 0 for i =0. P_i = 0 <----> no macro used.
+
+We devide the data into train validation and test sets, we use the validation data to find the best hyper_parameters (dropping_out, initial seed, learning rate, number of layers).
+
+We get the prediction, and use them to calculate the cumulative return and sharp ratios of Long_short porfolios, the cumulative return of decile sorted porfolios based on predctin return, the statistics of decile porfolios sorted based on some charactersitics. We plot the results and commment them.
+
+Refrence: Chen (2023), Hamilton (1994),...........
