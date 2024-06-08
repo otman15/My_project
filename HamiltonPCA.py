@@ -8,6 +8,7 @@ import pandas as pd
 import pickle
 
 
+
 '''
 Hamilton class:
     takes univariate or multivariate time seris, apply a hamilton filter and kim smoother
@@ -18,87 +19,62 @@ Hamilton class:
     if a new test data is given to predict new regime probabilites, we suppose we don't have 
     access to all the time series but only to present observations, so the kim smoother is not
     applied but the trained params and last probablity are used to infer new probablities.
+    
+    The code in the class is based on the article: Handbook of Econometrics, Volume 1 V, 
+    Edited by R.F. Engle and D.L. McFadden, chapter 50 State Space Models, 
+    4  Discrete valued state variables.
+    
+    Also it s based on the code Programs for estimation of Markov switching models using the EM algorithm. in
+    the web page : https://econweb.ucsd.edu/~jhamilto/software.htm#Markov
+    
 '''
 
 
-class HamiltonKimModel:
+
+class HamiltonKimModel: # use the model of Hamilton to get filtered probabilities ans kim smoothing
     def __init__(self, data, lag=True):
 
         if data.ndim == 1:  # Univariate time series
             data = data[np.newaxis, :]  # Convert to 2D array with one row
         self.lag = lag
-        self.y = data[:, 1:]  # Include all elements except the first one for each series, to have a lagged element
+        self.y = data[:, 1:]  # Include all elements except the first one for each series
         if self.lag:
-            self.x = data[:, :-1]  # Include all elements except the last one for each series for lagged data 
+            self.x = data[:, :-1]  # Include all elements except the last one for each series
         self.param = None
-
-
     
-    def hamilton_filter(self, param=None, new_obs=None):
-        # if param is not provided, this mean we are not optimizing but just predicting new prob on new data (test set)
-        if param is None:
-              param = self.param
-        
-        # if new observations are provided use it as the time series, and use the params to get initial first states probs.
-        if new_obs is not None:
-            
-            n_series = self.y.shape[0]
-            initial_probs = self.sp[-1]
-            new_y = new_obs if new_obs.ndim > 1 else new_obs[np.newaxis, :]
-            last_y = self.y[:, -1].reshape(n_series, 1)
-            combined_y = np.hstack((last_y, new_y))
-            if self.lag:
-                self.x = combined_y[:, :-1]  # All but the last element
-            self.y = combined_y[:, 1:]  # All but the first element
-            E0_t, E1_t = initial_probs
+    
+    
+    def filtering(self, param):
 
         n_series = self.y.shape[0]
-        
-        # retrieve the params: const, mu and sigma
+
         if self.lag:
-            const = param[:n_series*2].reshape(n_series, 2)
-            beta = param[n_series*2:n_series*4].reshape(n_series, 2)
-            sigma = param[n_series*4:n_series*6].reshape(n_series, 2)
-            p7, p8 = param[-2:]
-        else:
-            const = param[:n_series*2].reshape(n_series, 2)
-            sigma = param[n_series*2:n_series*4].reshape(n_series, 2)
-            p7, p8 = param[-2:]
-
+            const,beta,sigma, p,q = self.reshape_params(param, n_series)
+        else: const,sigma, p,q = self.reshape_params(param, n_series)
+                   
         nobs = self.y.shape[1]
-
-        # Transition probabilities
-        p00 = 1 / (1 + np.exp(-p7))
-        p11 = 1 / (1 + np.exp(-p8))
-        p01 = 1 - p00
-        p10 = 1 - p11
         
-        # if computing params (training) initiate the  first states probs
-        if new_obs is None:
-            
-            E1_t = (1 - p00) / (2 - p11 - p00)
-            E0_t = 1 - E1_t
+        rho = (1 - p) / (2 - q - p)
+        S = np.array([rho, 1 - rho])
+        
 
-        # Predicted state, filtered probability
-        pred_st = np.zeros((nobs, 2))
+        #  filtered probability
         fp = np.zeros((nobs, 2))
 
         loglike = 0
         for t in range(nobs):
             # Previous state
-            E0_t_1 = E0_t
-            E1_t_1 = E1_t
-
+            S_prev = [S[1],S[0]]
             # Regression estimation
             mu0 = np.zeros(n_series)
             mu1 = np.zeros(n_series)
             if self.lag:
-                for n in range(n_series):
-                    mu0[n] = const[n, 0] + beta[n, 0] * self.x[n, t]
-                    mu1[n] = const[n, 1] + beta[n, 1] * self.x[n, t]
+                    mu0 = [const[n, 0] + beta[n, 0] * self.x[n, t] for n in range(n_series)]
+                    mu1 = [const[n, 1] + beta[n, 1] * self.x[n, t] for n in range(n_series)]
+
             else:
-                mu0 = const[:, 0]
-                mu1 = const[:, 1]
+                    mu0 = const[:, 0]
+                    mu1 = const[:, 1]
 
             # Densities under the two regimes at t
             fy_g_st0 = 1
@@ -106,38 +82,126 @@ class HamiltonKimModel:
             for n in range(n_series):# independent observations f(y1,y2,..) = f(y1)*f(y2)*....
                 fy_g_st0 *= (1 / np.sqrt(2 * np.pi * sigma[n, 0] ** 2)) * np.exp(-((self.y[n, t] - mu0[n]) ** 2) / (2 * sigma[n, 0] ** 2))
                 fy_g_st1 *= (1 / np.sqrt(2 * np.pi * sigma[n, 1] ** 2)) * np.exp(-((self.y[n, t] - mu1[n]) ** 2) / (2 * sigma[n, 1] ** 2))
-
+                
+            p1 = [S_prev[0] * p * fy_g_st0, S_prev[0] * (1 - p) * fy_g_st1,
+                   S_prev[1] * (1 - q) * fy_g_st0,S_prev[1] * q * fy_g_st1]
+           
             # Density of yt
-            f_yt = E0_t_1 * p00 * fy_g_st0 + E0_t_1 * p01 * fy_g_st1 + E1_t_1 * p10 * fy_g_st0 + E1_t_1 * p11 * fy_g_st1
+            f_yt = p1[0]+ p1[1]+ p1[2]+ p1[3]
 
             if f_yt < 0 or np.isnan(f_yt):
                 loglike = -100000000
                 break
-
+            
             # State at t+1 given t
-            E0_t = (E0_t_1 * p00 * fy_g_st0 + E1_t_1 * p10 * fy_g_st0) / f_yt
-            E1_t = (E0_t_1 * p01 * fy_g_st1 + E1_t_1 * p11 * fy_g_st1) / f_yt
+            S[1] = (p1[0]+p1[2]) / f_yt
+            S[0] = (p1[1]+ p1[3]) / f_yt
 
-            pred_st[t, :] = [E0_t_1, E1_t_1]  # Predicted states
-            fp[t, :] = [E0_t, E1_t]  # Filtered probabilities
+            fp[t, :] = [S[1], S[0]]  # Filtered probabilities
 
             loglike += np.log(f_yt)
 
-        return {'loglike': -loglike, 'fp': fp, 'pred_st': pred_st}
+        return {'loglike': -loglike, 'fp': fp}
     
-    
+    def reshape_params(self, param, n_series):
 
-    def kim_smoother(self):
+        
+        if self.lag:
+            const = param[:n_series*2].reshape(n_series, 2)
+            beta = param[n_series*2:n_series*4].reshape(n_series, 2)
+            sigma = param[n_series*4:n_series*6].reshape(n_series, 2)
+            p7, p8 = param[-2:]
+            p = 1 / (1 + np.exp(-p7))
+            q = 1 / (1 + np.exp(-p8))
+            return const, beta, sigma, p, q
+        else:
+            const = param[:n_series*2].reshape(n_series, 2)
+            sigma = param[n_series*2:n_series*4].reshape(n_series, 2)
+            p7, p8 = param[-2:]
+            p = 1 / (1 + np.exp(-p7))
+            q = 1 / (1 + np.exp(-p8))
+            return const, sigma, p,q
+   
+    def predicting(self, new_obs):# applaying the filter one time to get the filtered probabilities
+        
+        param = self.param
+        n_series = self.y.shape[0]
+        initial_probs = self.sp[-1]
+        new_y = new_obs if new_obs.ndim > 1 else new_obs[np.newaxis, :]
+        last_y = self.y[:, -1].reshape(n_series, 1)
+        combined_y = np.hstack((last_y, new_y))
+        if self.lag:
+            self.x = combined_y[:, :-1]  # All but the last element
+        self.y = combined_y[:, 1:]  # All but the first element
+        E0_t, E1_t = initial_probs
+        
+        if self.lag:
+            const,beta,sigma, p,q = self.reshape_params(param, n_series)
+        else: const,sigma, p,q = self.reshape_params(param, n_series)
+            
+        
+        nobs = self.y.shape[1]
+       
+        rho = (1 - p) / (2 - q - p)
+        S = np.array([rho, 1 - rho])
+        
+ 
+        #  filtered probability
+        fp = np.zeros((nobs, 2))
+ 
+ 
+        for t in range(nobs):
+            # Previous state
+            S_prev = [S[1],S[0]]
+            # Regression estimation
+            mu0 = np.zeros(n_series)
+            mu1 = np.zeros(n_series)
+            if self.lag:
+                    mu0 = [const[n, 0] + beta[n, 0] * self.x[n, t] for n in range(n_series)]
+                    mu1 = [const[n, 1] + beta[n, 1] * self.x[n, t] for n in range(n_series)]
+ 
+            else:
+                    mu0 = const[:, 0]
+                    mu1 = const[:, 1]
+ 
+            # Densities under the two regimes at t
+            fy_g_st0 = 1
+            fy_g_st1 = 1
+            for n in range(n_series):# independent observations f(y1,y2,..) = f(y1)*f(y2)*....
+                fy_g_st0 *= (1 / np.sqrt(2 * np.pi * sigma[n, 0] ** 2)) * np.exp(-((self.y[n, t] - mu0[n]) ** 2) / (2 * sigma[n, 0] ** 2))
+                fy_g_st1 *= (1 / np.sqrt(2 * np.pi * sigma[n, 1] ** 2)) * np.exp(-((self.y[n, t] - mu1[n]) ** 2) / (2 * sigma[n, 1] ** 2))
+                
+            p1 = [S_prev[0] * p * fy_g_st0, S_prev[0] * (1 - p) * fy_g_st1,
+                   S_prev[1] * (1 - q) * fy_g_st0,S_prev[1] * q * fy_g_st1]
+           
+            # Density of yt
+            f_yt = p1[0]+ p1[1]+ p1[2]+ p1[3]
+ 
+            # State at t+1 given t
+            S[1] = (p1[0]+p1[2]) / f_yt
+            S[0] = (p1[1]+ p1[3]) / f_yt
+ 
+            fp[t, :] = [S[1], S[0]]  # Filtered probabilities
+ 
+ 
+ 
+        return {'fp': fp}
+        
+        
+        
+        
+
+                   
+
+    def smoothing(self): # get the smoothed probabilities
         p7, p8 = self.param[-2:]
 
         nobs = self.y.shape[1]
 
-        p00 = 1 / (1 + np.exp(-p7))
-        p11 = 1 / (1 + np.exp(-p8))
-        p01 = 1 - p00
-        p10 = 1 - p11
+         # Transition probabilities
+        p = 1 / (1 + np.exp(-p7))
+        q = 1 / (1 + np.exp(-p8))
 
-        fp = np.zeros((nobs, 2))
         sp = np.zeros((nobs, 2))
 
         # get filtered estimates
@@ -150,17 +214,17 @@ class HamiltonKimModel:
 
         # Iteration from T-1 to 1
         for is_ in range(T - 2, -1, -1):
-            p1 = (sp[is_ + 1, 0] * fp[is_, 0] * p00) / (fp[is_, 0] * p00 + fp[is_, 1] * p10)
-            p2 = (sp[is_ + 1, 1] * fp[is_, 0] * p01) / (fp[is_, 0] * p01 + fp[is_, 1] * p11)
-            p3 = (sp[is_ + 1, 0] * fp[is_, 1] * p10) / (fp[is_, 0] * p00 + fp[is_, 1] * p10)
-            p4 = (sp[is_ + 1, 1] * fp[is_, 1] * p11) / (fp[is_, 0] * p01 + fp[is_, 1] * p11)
+            p1 = (sp[is_ + 1, 0] * fp[is_, 0] * p) / (fp[is_, 0] * p + fp[is_, 1] * (1 - q))
+            p2 = (sp[is_ + 1, 1] * fp[is_, 0] * (1 - p)) / (fp[is_, 0] * (1 - p) + fp[is_, 1] * q)
+            p3 = (sp[is_ + 1, 0] * fp[is_, 1] * (1 - q)) / (fp[is_, 0] * p + fp[is_, 1] * (1 - q))
+            p4 = (sp[is_ + 1, 1] * fp[is_, 1] * q) / (fp[is_, 0] * (1 - p) + fp[is_, 1] * q)
 
             sp[is_, 0] = p1 + p2
             sp[is_, 1] = p3 + p4
 
         return sp
 
-    def fit(self):
+    def fit_markov_switching_model(self):
         if self.lag:
             n_series = self.y.shape[0]
             init_guess = np.ones(n_series * 6 + 2)
@@ -173,26 +237,27 @@ class HamiltonKimModel:
             bounds = [(None, None)] * (n_series * 4) + [(1e-6, None), (1e-6, None)]
 
 
-        mle = minimize(self.objective, init_guess, method='L-BFGS-B', bounds=bounds, options={'maxiter': 50000})
+        mle = minimize(self.likelihood_function, init_guess, method='L-BFGS-B', bounds=bounds, options={'maxiter': 50000})
         return mle.x
 
-    def objective(self, param):
-        result = self.hamilton_filter(param=param)
+    def likelihood_function(self, param):
+        result = self.filtering(param=param)
         return result['loglike']
 
     def run(self):
-        self.param = self.fit()
-        self.hf = self.hamilton_filter()
-        self.sp = self.kim_smoother()
+        self.param = self.fit_markov_switching_model()
+        self.hf = self.filtering(self.param)
+        self.sp = self.smoothing()
+
 
     def get_sp_hf(self):# kim smooth prob and hamilton filter results: filtered prob, predicted states
-        return {'smoothed_prob':self.sp, 'filtered_prob': self.hf['fp'], 'predicted_states':self.hf['pred_st']}
+        return {'smoothed_prob':self.sp, 'filtered_prob': self.hf['fp']}
 
 
     def plot_results(self, dates= None):
         plt.figure(figsize=(8, 6))
 
-        if all(dates) == None:
+        if not dates:
             plt.plot(self.sp[:, 0], label='Regime 1', color='green', linewidth=3, linestyle='-')
             plt.plot(self.sp[:, 1], label='Regime 2', color='blue', linewidth=3, linestyle='-')
         else:
@@ -210,6 +275,7 @@ class HamiltonKimModel:
         plt.show()
 
 
+
 ################################################################################################################################################
 
 ################################################################################################################################################
@@ -222,6 +288,9 @@ Group_macro_by_Class:
     it perform Pca on each group and yield the first component of each Pca groupe of macro
     Outpout a dictionnary of (groupe: PC1)
     it can also retrieve data and plot PC1
+    
+    I used here the same data used by Chen et Pelger (2023), it can be found on FRED-MD: A Monthly Database for Macroeconomic Research
+    for the grouping I used the same grouping used in the article https://research.stlouisfed.org/wp/2015/2015-012.pdf
 '''
 
 
@@ -399,14 +468,14 @@ class Macro_group_probs:
 
         for groupe in data_pca_tr.keys():
             
-            model = HamiltonKimModel(data_pca_tr[groupe]) 
+            model = HamiltonKimModel(data_pca_tr[groupe], False) 
             model.run() # run hamilton filter for each groupe of PC1 and also for the 9 PC1 of all the groups
             
             results_tr = model.get_sp_hf() 
             smoothed_prob_tr = results_tr['smoothed_prob'] # smoothed prob for train valid data
             smoothed_prob_tr = np.concatenate(([smoothed_prob_tr[:, 0][0]], smoothed_prob_tr[:, 0])) # the filter doesnt yild the first prob so we make it equal as the second
             
-            results_test= model.hamilton_filter(param=None,new_obs=data_pca_test[groupe]) # get filterd probabilites for test set macro
+            results_test= model.predicting(new_obs=data_pca_test[groupe]) # get filterd probabilites for test set macro
             filtered_prob_test= results_test['fp'][:, 0]
             #####filtered_prob_test = np.concatenate(([filtered_prob_test[:, 0][0]], filtered_prob_test[:, 0]))
             
@@ -415,9 +484,9 @@ class Macro_group_probs:
             
 
     def write_to_file(self, folder_path):
-        with open(folder_path+'/macro_tr_prob.pkl', 'wb') as file:
+        with open(folder_path+'/macro_tr_prob_no_lag.pkl', 'wb') as file:
             pickle.dump(self.prob_tr, file)
-        with open(folder_path+'/macro_test_prob.pkl', 'wb') as file:
+        with open(folder_path+'/macro_test_prob.pkl_no_lag', 'wb') as file:
             pickle.dump(self.prob_test, file)
 
     def get_group_prob(self):
@@ -425,7 +494,7 @@ class Macro_group_probs:
     
 
 '''
-this function run group data run pca on groupes and run hamilton filter on each group and all groups,
+this function groupes data, run pca on the groupes and run hamilton filter on each group and also on all groups,
 it get macro prob associated with each case
 '''
         
@@ -456,8 +525,9 @@ def run_Hamilton_filter():
     hamilton = Macro_group_probs(tr_val_macro_path,test_macro_path, all_groups= True)
     prob_tr_val, prob_test = hamilton.get_group_prob()
     hamilton.write_to_file('macro_probabilities') 
+
     
     
    
-    
-#to write prob of files run : run_Hamilton_filter()   
+run_Hamilton_filter()     
+#to write prob on files run : run_Hamilton_filter()   
