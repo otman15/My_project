@@ -10,16 +10,16 @@ from util import sharp, decile_portfolios,long_short_portfolio,DecileStatistics
 from Load_data import Load_data
 import pandas as pd
 import matplotlib.pyplot as plt
-from Plotting import plot_multi_dec_port_basedOn_pred_ret,plot_multi_L_S_portf_ret
+from Plotting import plot_multi_dec_port_basedOn_pred_ret,plot_multi_L_S_portf_ret,plot_macro_probs
 
 
 
 
 
 ################# get test data and predictions and do calculations ###################################"
-train_tmp_path = "datasets/char/Char_train.npz"
-test_tmp_path = "datasets/char/Char_test.npz"
-valid_tmp_path = "datasets/char/Char_valid.npz" 
+train_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_train.npz"
+test_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_test.npz"
+valid_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_valid.npz" 
 
 macro_paths = ('macro_probabilities/macro_tr_prob.pkl','macro_probabilities/macro_test_prob.pkl')   
 groupes = ['all_vars', 'all_groups', 'money_credit','Labor_market', 'Output_Income',  'Housing',
@@ -51,6 +51,9 @@ for groupe in groupes:
       del data, Xtest, mask, Ytest, pred
       
       
+############################################ Regime proba#####################################################################""    
+      
+plot_macro_probs([('macro_probabilities/macro_tr_prob.pkl', 'macro_probabilities/macro_test_prob.pkl')], save=False)
       
 ###################################### decile portf based on return ############################################################
 

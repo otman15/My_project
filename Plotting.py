@@ -8,6 +8,54 @@ Created on Wed May 29 22:32:05 2024
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
+
+
+
+#################################################plot the states of regimes#################################################"
+def plot_macro_probs(paths, save=False):
+    # Load the dictionaries from the pickle files
+    time_series_tr = {}
+    time_series_test = {}
+    for path_tr, path_test in paths:
+        with open(path_tr, 'rb') as f_tr, open(path_test, 'rb') as f_test:
+            time_series_tr.update(pickle.load(f_tr))
+            time_series_test.update(pickle.load(f_test))
+
+    num_series = len(time_series_tr)
+
+    num_months = len(time_series_tr['Output_Income']) + len(time_series_tr['Output_Income'])
+    dates = pd.date_range(end='20161201', periods=num_months, freq='MS')
+    
+    # Calculate the number of rows needed (5 rows for 10 plots in 2 columns)
+    num_rows = (num_series + 1) // 2
+
+    # Create subplots with 2 columns
+    fig, axs = plt.subplots(num_rows, 2, figsize=(16, num_rows * 3.5))
+
+    # Flatten the axs array for easy iteration
+    axs = axs.flatten()
+
+    # Iterate through the dictionary and plot each time series
+    for i, key in enumerate(time_series_tr.keys()):
+        tr = time_series_tr[key]
+        test = time_series_test[key]
+        val = np.concatenate((tr, test))
+        axs[i].scatter(dates, val)
+        axs[i].set_title(key + ' no_lag', fontsize=16)
+
+    # Hide any empty subplots
+    for i in range(num_series, len(axs)):
+        fig.delaxes(axs[i])
+
+    # Adjust layout
+    plt.tight_layout()
+
+    if save:
+        plt.savefig('final_results/figs/macro_prob_lag.png')
+    
+    # Show the plot
+    plt.show()
 
 
 ################## plot decile portfolio sorted based on predicted returns###############################################
@@ -110,7 +158,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
             s_cumsum = s.cumsum()
             axs[i].scatter(s_cumsum.index, s_cumsum , s=10, label=decile)
 
-        axs[i].set_title('Cumulative Returns of Decile Portfolios sorted based on pred, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=6)
+        axs[i].set_title('Cumulative Returns of Decile Portfolios sorted based on pred, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
         axs[i].set_xlabel('Time', fontsize=6)
         axs[i].set_ylabel('Cumulative Return based on ret pred', fontsize=6)
         axs[i].legend(title='Decile Portfolios',title_fontsize=6, fontsize=4)
