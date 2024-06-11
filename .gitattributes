@@ -1,0 +1,2 @@
+char/*.npz filter=lfs diff=lfs merge=lfs -text
+datasets/char/*.npz filter=lfs diff=lfs merge=lfs -text
