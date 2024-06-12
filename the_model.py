@@ -31,12 +31,18 @@ class FFN_1(nn.Module):
         self._individual_feature_dim = model_params['feature_dim']
         self._dropout = model_params['dropout']
         self.model_params = model_params
+        self.layer_sizes = model_params['layer_sizes']
+        self.layers = nn.ModuleList()
 
-        self.fc1 = nn.Linear(self._individual_feature_dim, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 16)
-        self.fc4 = nn.Linear(16, 8)
-        self.fc5 = nn.Linear(8, 1)
+         # Input layer
+        self.layers.append(nn.Linear(self._individual_feature_dim, self.layer_sizes[0]))
+        
+        # Hidden layers
+        for i in range(len(self.layer_sizes) - 1):
+            self.layers.append(nn.Linear(self.layer_sizes[i], self.layer_sizes[i + 1]))
+        
+        # Output layer
+        self.layers.append(nn.Linear(self.layer_sizes[-1], 1))
 
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(self._dropout)
@@ -46,21 +52,11 @@ class FFN_1(nn.Module):
 
     # Define the forward propagation
     def forward(self, x):
-
-
-        r = self.relu(self.fc1(x))
-        r = self.dropout(r)
-        r = self.relu(self.fc2(r))
-        r = self.dropout(r)
-        r = self.relu(self.fc3(r))
-        r = self.dropout(r)
-        r = self.relu(self.fc4(r))
-        r = self.dropout(r)
-        r_pred = self.fc5(r)
-
+        for layer in self.layers[:-1]:
+            x = self.relu(layer(x))
+            x = self.dropout(x)
+        r_pred = self.layers[-1](x)
         return r_pred.view(-1)
-
-
 
 
     # train the model for each group of data
@@ -103,20 +99,17 @@ class FFN_1(nn.Module):
 
             loss.backward()
             optimizer.step()
-            
-      
+                
             
             model.eval()
             with torch.no_grad():
                 Ytr_pred = model(Xtrain_m)
-
-        
+     
                 loss = self.criterion(Ytr_pred, Ytrain[mask_tr])
         
                 train_epoch_loss = loss.item()
                
-
-            
+         
             model.eval()
 
             with torch.no_grad():
@@ -140,8 +133,7 @@ class FFN_1(nn.Module):
             r2_val = R2(YV[mask_val], YV[mask_val] - Y_pred_val.detach().cpu().numpy(),cross_sectional=False)
 
             
-            
-                
+                            
             if valid_epoch_loss < self.best_val_loss:
                 self.best_val_loss = valid_epoch_loss
                 self.best_params = model.state_dict()
@@ -151,25 +143,22 @@ class FFN_1(nn.Module):
             if patience > max_patience: ## early stop when patience become larger than 40
                 print('patience > ', max_patience)
                 break
-        
-    
-                
+                       
             if epoch >= printFreq and epoch % printFreq == 0:
     
                 
-                print('\n\n')
-                
-                
-                print('macro_group: %s  Epoch n° :  %d  seed : %d' %(groupe, epoch, seed))
+                print('\n')
+                                
+                print('macro_group: %s  Epoch n° :  %d  ' %(groupe, epoch))
                          
                 if test_set :
-                    print('Epoch %d train/valid/test loss: %0.4f/%0.4f/%0.4f' %(epoch,train_epoch_loss, valid_epoch_loss,test_epoch_loss))
-                    print('Epoch %d train/valid/test sharp: %0.4f/%0.4f/%0.4f' %(epoch, sharp_train, sharp_valid,sharp_test))
-                    print('Epoch %d train/valid/test R2: %0.4f/%0.4f/%0.4f' %(epoch, r2_train, r2_val, r2_test))
+                    print('train/valid/test loss: %0.4f/%0.4f/%0.4f' %(train_epoch_loss, valid_epoch_loss,test_epoch_loss))
+                    print('train/valid/test sharp: %0.4f/%0.4f/%0.4f' %(sharp_train, sharp_valid,sharp_test))
+                    print('train/valid/test R2: %0.4f/%0.4f/%0.4f' %(r2_train, r2_val, r2_test))
                 else:
-                    print('Epoch %d train2/valid loss: %0.4f/%0.4f' %(epoch,train_epoch_loss, valid_epoch_loss))
-                    print('Epoch %d train/valid sharp: %0.4f/%0.4f' %(epoch, sharp_train, sharp_valid))
-                    print('Epoch %d train/valid R2: %0.4f/%0.4f' %(epoch, r2_train, r2_val))     
+                    print('train2/valid loss: %0.4f/%0.4f' %(train_epoch_loss, valid_epoch_loss))
+                    print('train/valid sharp: %0.4f/%0.4f' %(sharp_train, sharp_valid))
+                    print('train/valid R2: %0.4f/%0.4f' %(r2_train, r2_val))     
                     
                 end_time = time.time()
                 elapsed_time = end_time - start_time
@@ -184,31 +173,4 @@ class FFN_1(nn.Module):
         return self.best_val_loss
 
 
-'''
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
-class FFN_1(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout_rate=0.5):
-        super(FFN_1, self).__init__()
-        
-        # Define the network architecture
-        self.hidden_layers = nn.ModuleList()
-        last_size = input_size
-        for hidden_size in hidden_sizes:
-            self.hidden_layers.append(nn.Linear(last_size, hidden_size))
-            last_size = hidden_size
-        
-        self.output_layer = nn.Linear(last_size, output_size)
-        self.dropout = nn.Dropout(dropout_rate)
-    
-    # Define the forward propagation
-    def forward(self, x):
-        for layer in self.hidden_layers:
-            x = F.relu(layer(x))
-            x = self.dropout(x)
-        x = self.output_layer(x)
-        return x
-'''
-    

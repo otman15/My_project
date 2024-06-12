@@ -17,9 +17,9 @@ from Plotting import plot_multi_dec_port_basedOn_pred_ret,plot_multi_L_S_portf_r
 
 
 ################# get test data and predictions and do calculations ###################################"
-train_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_train.npz"
-test_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_test.npz"
-valid_tmp_path = "/media/otman/72A59C562B1C8655/Data analysis/Python_working_dir/datasets/char/Char_valid.npz" 
+train_tmp_path = "datasets/char/Char_train.npz"
+test_tmp_path  = "datasets/char/Char_test.npz"
+valid_tmp_path = "datasets/char/Char_valid.npz" 
 
 macro_paths = ('macro_probabilities/macro_tr_prob.pkl','macro_probabilities/macro_test_prob.pkl')   
 groupes = ['all_vars', 'all_groups', 'money_credit','Labor_market', 'Output_Income',  'Housing',
@@ -53,8 +53,8 @@ for groupe in groupes:
       
 ############################################ Regime proba#####################################################################""    
       
-plot_macro_probs([('macro_probabilities/macro_tr_prob.pkl', 'macro_probabilities/macro_test_prob.pkl')], save=False)
-      
+plot_macro_probs([('macro_probabilities/macro_tr_prob.pkl', 'macro_probabilities/macro_test_prob.pkl')], save=True, lag= 'with_lag')
+plot_macro_probs([('macro_probabilities/macro_tr_prob_no_lag.pkl', 'macro_probabilities/macro_test_prob_no_lag.pkl')], save=True, lag= 'no_lag')     
 ###################################### decile portf based on return ############################################################
 
 potf_ret_list = list(decile_portf_on_ret.values())
@@ -92,7 +92,7 @@ table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc='center', loc
 plt.subplots_adjust(top=0.9)
 
 # Add title to the table
-plt.suptitle('Sharp Ratio OOS L_S portf', fontsize=14, y=0.85)
+plt.suptitle('Sharp Ratio OOS L_S portf', fontsize=12, y=0.85)
 
 plt.savefig('final_results/figs/sharp_ratios_table.jpg', bbox_inches='tight')
 
@@ -105,8 +105,7 @@ for group in stat_sorted.keys(): # get r2_cs and r2_cs_decile
   R2_CS[group] =stat_sorted[group][2]
   R2_CS_decile[group]=stat_sorted[group][5]
 
-R2_CS
-R2_CS_decile
+
 
 ############## use new keys for space in figs 
 new_keys = {'all_vars': 'all_vars','all_groups':'all_gr','Labor_market':'Lb Mrk', 'Housing':'Hous', 'Consumption_OR':'Cons Qr', 'money_credit':'Mny Cr', 'interest_exchange_rates':'Int Ex', 'Prices':'Pce', 'Stock_markets':'Stk Mrt', 'Other':'Other',None:'no Mac', 'Output_Income':'Out In'}
@@ -131,7 +130,7 @@ df = pd.concat([df, new_row], ignore_index=True) # add r2_cs dataframe to r2_cs_
 
 
 # Create the plot
-fig, ax = plt.subplots(figsize=(10, 4))
+fig, ax = plt.subplots(figsize=(10, 5))
 
 # Hide axes
 ax.axis('tight')
@@ -150,12 +149,12 @@ table = ax.table(cellText=cellText, colLabels=df.columns, cellLoc='center', loc=
 plt.subplots_adjust(top=0.85)
 
 # Add title to the table
-plt.suptitle('CS_R2 deciles of momentum sorted porfolios with diff groups of macro', fontsize=10, y=0.85)
+plt.suptitle('CS_R2 deciles of momentum sorted porfolios with diff groups of macro', fontsize=12, y=0.85)
 
 table.auto_set_font_size(False)
 for key, cell in table.get_celld().items():
     if key[0] == 0:  # Header row
-        cell.set_fontsize(8)
+        cell.set_fontsize(10)
     else:
         cell.set_fontsize(9)
 

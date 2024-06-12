@@ -15,7 +15,7 @@ from HamiltonPCA import run_Hamilton_filter
 #from Plotting import long_and_short,plot_L_S_portf_ret,plot_dec_port_basedOn_pred_ret
 from Load_data import Load_data
 import os
-
+import time
 
 def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):    
     
@@ -28,21 +28,20 @@ def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):
     data_test = data.get_test()
     
     #test_variables = data.get_var_names()
-    
-    
+       
     Xtest_m, Ytest, mask_test = data_test
     
     model_params = {'feature_dim':Xtest_m.shape[-1],
                     "num_epochs": 2000,'dropout':0.5,                                
-                    "learning_rate": 0.001}
+                    "learning_rate": 0.001,
+                    'layer_sizes': [64, 32, 16, 8]}
     model = FFN_1(model_params).to(device)
     
     best_params = None
-    
-    
+       
     ######################################"
     model.train_model(device,groupe,seed,model, model_params, data_train, data_valid,
-                  printFreq=20, max_patience=300)
+                  printFreq=50, max_patience=300)
     ############################################
     
     best_params = model.get_best_params()
@@ -62,48 +61,51 @@ def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):
     if save : 
        with open(f'final_results/results/{groupe}_pred.pkl', 'wb') as f:
            pickle.dump(pred, f)
+    del model
         
-    return pred
 
 
 
 def run_all(save=False): 
     # Check if the probabilities file exists
     if not os.path.exists('macro_probabilities'):
+        print("running Hamilton filter")
         run_Hamilton_filter()
     else:
         print("Probabilities file already exists, execute run_Hamilton_filter() if you want to get and write prob again")
+       
+    groupes = ['interest_exchange_rates', 'Prices', 'Stock_markets', 'Other', 'money_credit','Labor_market', 'Output_Income',  'Housing',
+               'Consumption_OR', None ,'all_vars', 'all_groups']
     
-    
-    
-    groupes = [None ,'all_vars', 'all_groups', 'money_credit','Labor_market', 'Output_Income',  'Housing',
-               'Consumption_OR',  'interest_exchange_rates', 'Prices', 'Stock_markets', 'Other']
-    
-    
+    #using probs obtained without lag
     char_paths =("datasets/char/Char_train.npz", "datasets/char/Char_valid.npz" , "datasets/char/Char_test.npz")
-    macro_prob_paths = ('macro_probabilities/macro_tr_prob.pkl','macro_probabilities/macro_test_prob.pkl')   
-    
-    seed = 991585  
+    macro_prob_paths = ('macro_probabilities/macro_tr_prob_no_lag.pkl','macro_probabilities/macro_test_prob_no_lag.pkl')   
+       
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-    predictions = {}
+    i = 1
     for groupe in groupes:
+        print('\n')
+        print("groupe:",i)
+        start_time = time.time()
+        seed = 991585 
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             
-        res = run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False)
-        predictions[groupe] = res
-        del res
+        run_model(seed,char_paths, macro_prob_paths,groupe, device, save=save)
+       
+        elapsed_time = time.time() - start_time
+        print("group training time = " ,elapsed_time)
+        i=i+1
         gc.collect()  # Explicitly call garbage collector
         torch.cuda.empty_cache()  # Free up GPU memory if used
 
 
-    return predictions
 
 
-predictions = run_all(save=False)
+run_all(save=True)
 
 
 

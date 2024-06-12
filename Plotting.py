@@ -13,7 +13,7 @@ import pickle
 
 
 #################################################plot the states of regimes#################################################"
-def plot_macro_probs(paths, save=False):
+def plot_macro_probs(paths, save=False, lag =' no_lag'):
     # Load the dictionaries from the pickle files
     time_series_tr = {}
     time_series_test = {}
@@ -42,7 +42,7 @@ def plot_macro_probs(paths, save=False):
         test = time_series_test[key]
         val = np.concatenate((tr, test))
         axs[i].scatter(dates, val)
-        axs[i].set_title(key + ' no_lag', fontsize=16)
+        axs[i].set_title(key + lag , fontsize=16)
 
     # Hide any empty subplots
     for i in range(num_series, len(axs)):
@@ -52,7 +52,7 @@ def plot_macro_probs(paths, save=False):
     plt.tight_layout()
 
     if save:
-        plt.savefig('final_results/figs/macro_prob_lag.png')
+        plt.savefig('final_results/figs/macro_prob_'+ lag +'.png')
     
     # Show the plot
     plt.show()
@@ -143,7 +143,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
         raise ValueError("Length of potf_ret_list and macro_group_list must be the same.")
 
     # Calculate the number of rows and columns for the subplots
-    ncols = 2
+    ncols = 3
     nrows =  (n + 1) // ncols  # Ensures enough rows for all plots
 
     fig, axs = plt.subplots(nrows, ncols, figsize=(14, 8 * nrows))
@@ -158,10 +158,10 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
             s_cumsum = s.cumsum()
             axs[i].scatter(s_cumsum.index, s_cumsum , s=10, label=decile)
 
-        axs[i].set_title('Cumulative Returns of Decile Portfolios sorted based on pred, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
-        axs[i].set_xlabel('Time', fontsize=6)
-        axs[i].set_ylabel('Cumulative Return based on ret pred', fontsize=6)
-        axs[i].legend(title='Decile Portfolios',title_fontsize=6, fontsize=4)
+        axs[i].set_title('Cumulative Returns, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
+        axs[i].set_xlabel('Time', fontsize=8)
+        axs[i].set_ylabel('Cumulative Return based on ret pred', fontsize=8)
+        axs[i].legend(title='Decile Portfolios',title_fontsize=10, fontsize=8)
         axs[i].grid(True)
 
     # Remove any unused subplots
@@ -171,7 +171,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
     plt.tight_layout()
 
     if save:
-        fig.savefig('final_results/figs/Cumulative_Returns_of_diff_Decile_Portfolios_all.pdf')
+        fig.savefig('final_results/figs/Cumulative_Returns_of_Decile_Portfolios_sorted_based_on_ret_pred.pdf')
 
     plt.show()
 
@@ -203,12 +203,12 @@ def plot_multi_L_S_portf_ret(ls_returns_list, macro_group_list, save=False):
                  marker=markers[i % len(markers)], 
                  linestyle='None', 
                  markersize=2, 
-                 label=f'Long-Short Portfolio ({macro_group})')
+                 label=f'{macro_group}')
 
   plt.title('Cumulative Returns of Long-Short Portfolios',fontsize=10)
   plt.xlabel('Time')
   plt.ylabel('Cumulative Return')
-  plt.legend(title='Portfolio', title_fontsize=8, fontsize=6)
+  plt.legend(title='groupe of macro', title_fontsize=10, fontsize=9)
   plt.grid(True)
 
   if save:
