@@ -9,11 +9,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-
+import pandas_datareader.data as web
 
 
 #################################################plot the states of regimes#################################################"
 def plot_macro_probs(paths, save=False, lag =' no_lag'):
+    data = web.DataReader('USREC', 'fred', start='1967-01-01', end='2016-12-31')
+    data = data.reset_index()
+    recession_starts = data['DATE'][data['USREC'].diff() == 1]
+    recession_ends = data['DATE'][data['USREC'].diff() == -1]
+    
+    
     # Load the dictionaries from the pickle files
     time_series_tr = {}
     time_series_test = {}
@@ -43,6 +49,8 @@ def plot_macro_probs(paths, save=False, lag =' no_lag'):
         val = np.concatenate((tr, test))
         axs[i].scatter(dates, val)
         axs[i].set_title(key + lag , fontsize=16)
+        for start, end in zip(recession_starts, recession_ends):
+            axs[i].axvspan(start, end, color='grey', alpha=0.5)
 
     # Hide any empty subplots
     for i in range(num_series, len(axs)):
