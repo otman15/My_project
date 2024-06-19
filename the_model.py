@@ -4,14 +4,17 @@ Created on Tue May 28 01:19:34 2024
 
 @author: Otman CH
 
-This class implements a Feed-Forward Neural Network (FFN_1) using PyTorch for regression prediction tasks. 
-It includes methods for defining the network architecture, forward propagation, and model training 
-with early stopping based on validation loss. 
-The network architecture consists of multiple fully connected layers with ReLU activation and dropout 
-for regularization. The training method utilizes the AdamW optimizer and Mean Squared Error loss,
-and tracks metrics such as Sharpe ratio and R^2 for train, validation, and test sets.
+  Cette classe implémente un réseau de neurones à propagation directe (FFN) en utilisant PyTorch
+pour des tâches de prédiction (régression). Elle inclut des méthodes pour définir l'architecture
+du réseau, la propagation avant et l'entraînement du modèle avec arrêt anticipé basé sur la perte
+de validation. 
 
+  L'architecture du réseau comprend plusieurs couches entièrement connectées avec une activation
+ReLU et un dropout pour la régularisation.
 
+  La méthode d'entraînement utilise l'optimiseur AdamW et la perte quadratique moyenne (Mean Squared Error),
+et suit des métriques telles que le ratio de Sharpe et R^2 pour les ensembles d'entraînement,
+de validation et de test.
 """
 
 
@@ -27,21 +30,21 @@ class FFN_1(nn.Module):
     def __init__(self, model_params):
         super(FFN_1, self).__init__()
         
-        # Define the network architecture
+        # architecture du réseau
         self._individual_feature_dim = model_params['feature_dim']
         self._dropout = model_params['dropout']
         self.model_params = model_params
         self.layer_sizes = model_params['layer_sizes']
         self.layers = nn.ModuleList()
 
-         # Input layer
+         # Couche d’entrée
         self.layers.append(nn.Linear(self._individual_feature_dim, self.layer_sizes[0]))
         
-        # Hidden layers
+        # Couches Cachées
         for i in range(len(self.layer_sizes) - 1):
             self.layers.append(nn.Linear(self.layer_sizes[i], self.layer_sizes[i + 1]))
         
-        # Output layer
+        # Couche de Sortie
         self.layers.append(nn.Linear(self.layer_sizes[-1], 1))
 
         self.relu = nn.ReLU()
@@ -50,7 +53,7 @@ class FFN_1(nn.Module):
         self.best_params = None
 
 
-    # Define the forward propagation
+    # propagation avant
     def forward(self, x):
         for layer in self.layers[:-1]:
             x = self.relu(layer(x))
@@ -59,11 +62,11 @@ class FFN_1(nn.Module):
         return r_pred.view(-1)
 
 
-    # train the model for each group of data
+    # Entrainer le modèle pour chaque groupe
     def train_model(self, device , groupe,seed,model, model_params, train_data, valid_data, test_set = None,
                       printFreq=100, max_patience = 100):
         
-        # paramters initialization and data preparation for input layer
+        # Initialisation des paramètres et préparation des données pour le couche d'entrée
         
         self.best_val_loss = float('inf')
         patience=0
@@ -88,7 +91,7 @@ class FFN_1(nn.Module):
     
         start_time = time.time()
         
-        # training using forward backward propagation
+        # Entrainement en utilisant la propagation avant arrière
         for epoch in range(model_params['num_epochs']):
                   
             model.train()
@@ -140,7 +143,7 @@ class FFN_1(nn.Module):
                 patience = 0
             else:
                     patience += 1
-            if patience > max_patience: ## early stop when patience become larger than 40
+            if patience > max_patience: ## arrêt anticipé 'early stoping' 
                 print('patience > ', max_patience)
                 break
                        

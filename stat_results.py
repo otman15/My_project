@@ -16,14 +16,29 @@ from Plotting import plot_multi_dec_port_basedOn_pred_ret,plot_multi_L_S_portf_r
 
 
 
-################# get test data and predictions and do calculations ###################################"
+
+############################################proba Regime #####################################################################""    
+      
+plot_macro_probs([('macro_probabilities/macro_tr_prob_avec_retard.pkl', 'macro_probabilities/macro_test_prob_avec_retard.pkl')], save=True, lag= 'avec_retard')
+plot_macro_probs([('macro_probabilities/macro_tr_prob_sans_retard.pkl', 'macro_probabilities/macro_test_prob_sans_retard.pkl')], save=True, lag= 'sans_retard')  
+
+
+
+
+
+
+
+################# Obtenez les données de test et les prédictions, puis effectuez les calculs nécessaires. ###################################"
 train_tmp_path = "datasets/char/Char_train.npz"
 test_tmp_path  = "datasets/char/Char_test.npz"
 valid_tmp_path = "datasets/char/Char_valid.npz" 
 
-macro_paths = ('macro_probabilities/macro_tr_prob.pkl','macro_probabilities/macro_test_prob.pkl')   
-groupes = ['all_vars', 'all_groups', 'money_credit','Labor_market', 'Output_Income',  'Housing',
-           'Consumption_OR',  'interest_exchange_rates', 'Prices', 'Stock_markets', 'Other', None]
+macro_paths = ('macro_probabilities/macro_tr_prob_sans_retard.pkl','macro_probabilities/macro_test_prob_sans_retard.pkl') 
+  
+groupes = ['Toutes_vars', 'Tous_groupes', 'Monnaie_credit','Marche_de_travail', 'Production_Revenus',  'Logement',
+           'Conso_Ordres',  'Taux_interet_change', 'Prix', 'Marches_Boursiers', 'Autres', None]
+
+   
 
 decile_portf_on_ret = {}
 ls_returns = {}
@@ -38,7 +53,7 @@ for groupe in groupes:
       char_names = data.get_var_names()
     
       with open(f'final_results/results/{groupe}_pred.pkl', 'rb') as f:
-        if groupe == 'all_groups' : pred = pickle.load(f)
+        if groupe == 'Tous_groupes' : pred = pickle.load(f)
         else :                      pred = pickle.load(f)
       sharps[groupe] = sharp(pred,Ytest,mask)
       decile_portf_on_ret[groupe] = decile_portfolios(pred, Ytest, mask, deciles=10)[0]
@@ -51,11 +66,10 @@ for groupe in groupes:
       del data, Xtest, mask, Ytest, pred
       
       
-############################################ Regime proba#####################################################################""    
-      
-plot_macro_probs([('macro_probabilities/macro_tr_prob.pkl', 'macro_probabilities/macro_test_prob.pkl')], save=True, lag= 'with_lag')
-plot_macro_probs([('macro_probabilities/macro_tr_prob_no_lag.pkl', 'macro_probabilities/macro_test_prob_no_lag.pkl')], save=True, lag= 'no_lag')     
-###################################### decile portf based on return ############################################################
+   
+
+
+###################################### portf decile  basé sur pred de rend ############################################################
 
 potf_ret_list = list(decile_portf_on_ret.values())
 macro_group_list = list(decile_portf_on_ret.keys())
@@ -63,7 +77,11 @@ macro_group_list = list(decile_portf_on_ret.keys())
 plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=True)
 
 
-######################################### LS portf based on ret ###########################################################
+
+
+
+
+#########################################portf LS  basé sur pred de rend ###########################################################
 
 ls_returns_list = list(ls_returns.values())
 macro_group_list = list(ls_returns.keys())
@@ -71,13 +89,16 @@ macro_group_list = list(ls_returns.keys())
 plot_multi_L_S_portf_ret(ls_returns_list, macro_group_list, save=True)
 
 
-############################### Sharp ratio LS portf based on ret #############################""
+
+
+
+############################### ratio de Sharpe  LS portf basé sur pred #############################""
 
 if None in sharps:
-    sharps['without macro'] = sharps.pop(None)
+    sharps['Sans macro'] = sharps.pop(None)
 
 # Create a DataFrame from the dictionary
-df = pd.DataFrame(list(sharps.items()), columns=['macro groupe', 'sharp'])
+df = pd.DataFrame(list(sharps.items()), columns=['groupe macro', 'sharpe'])
 df = df.round(decimals=3)
 fig, ax = plt.subplots()
 
@@ -92,23 +113,26 @@ table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc='center', loc
 plt.subplots_adjust(top=0.9)
 
 # Add title to the table
-plt.suptitle('Sharp Ratio OOS L_S portf', fontsize=12, y=0.85)
+plt.suptitle('Ratio de sharpe OOS L_C portf', fontsize=12, y=0.85)
 
-plt.savefig('final_results/figs/sharp_ratios_table.jpg', bbox_inches='tight')
+plt.savefig('final_results/figs/Table_ratios_de_sharpe.jpg', bbox_inches='tight')
 
 
-###################################### stat of decile sorted portf based on momentum ##########################"
+
+
+
+###################################### stat portefeuilles de déciles triés par momentum  ##########################"
 stat_sorted # diffrent stats 
 R2_CS = {}
 R2_CS_decile={}
-for group in stat_sorted.keys(): # get r2_cs and r2_cs_decile
+for group in stat_sorted.keys(): #  r2_cs et r2_cs_decile
   R2_CS[group] =stat_sorted[group][2]
   R2_CS_decile[group]=stat_sorted[group][5]
 
 
 
-############## use new keys for space in figs 
-new_keys = {'all_vars': 'all_vars','all_groups':'all_gr','Labor_market':'Lb Mrk', 'Housing':'Hous', 'Consumption_OR':'Cons Qr', 'money_credit':'Mny Cr', 'interest_exchange_rates':'Int Ex', 'Prices':'Pce', 'Stock_markets':'Stk Mrt', 'Other':'Other',None:'no Mac', 'Output_Income':'Out In'}
+############## Utilisez de nouvelles clés pour l'espace dans les figures.
+new_keys = {'Toutes_vars': 'Ttes_vars','Tous_groupes':'ts_gp','Marche_de_travail':'Mr Tv', 'Logement':'Lgm', 'Conso_Ordres':'Cons Ord', 'Monnaie_credit':'Mn Cr', 'Taux_interet_change':'Int Ch', 'Prix':'Prix', 'Marches_Boursiers':'Mr Brs', 'Autres':'Autres',None:'Sans Mac', 'Production_Revenus':'Pr Rev'}
 
 old_keys = list(R2_CS_decile.keys())
 
@@ -123,41 +147,35 @@ df = df.round(decimals=3)
 df.insert(0, 'decile', list(range(1, 11)))
 
 new_row  = pd.DataFrame([R2_CS])
-new_row.insert(0, 'decile', 'all')
+new_row.insert(0, 'decile', 'Tout')
 
-df = pd.concat([df, new_row], ignore_index=True) # add r2_cs dataframe to r2_cs_decile dataframe using all for the index
+df = pd.concat([df, new_row], ignore_index=True) # Ajoutez le DataFrame r2_cs au DataFrame r2_cs_decile en utilisant "Tour" comme index.
 
 
+fig, ax = plt.subplots(figsize=(12, 6))
 
-# Create the plot
-fig, ax = plt.subplots(figsize=(10, 5))
-
-# Hide axes
 ax.axis('tight')
 ax.axis('off')
 
-# Format the cellText to ensure integers remain integers
+# S'assurer que les entiers restent entiers
 cellText = []
 for row in df.itertuples(index=False):
     formatted_row = [f"{x:.3f}" if isinstance(x, float) else f"{x}" for x in row]
     cellText.append(formatted_row)
 
-# Create the table
+# Créer le tableau
 table = ax.table(cellText=cellText, colLabels=df.columns, cellLoc='center', loc='center')
 
-# Adjust layout to make room for the title
-plt.subplots_adjust(top=0.85)
-
-# Add title to the table
-plt.suptitle('CS_R2 deciles of momentum sorted porfolios with diff groups of macro', fontsize=12, y=0.85)
-
+# Ajuster la mise en page du tableau
 table.auto_set_font_size(False)
-for key, cell in table.get_celld().items():
-    if key[0] == 0:  # Header row
-        cell.set_fontsize(10)
-    else:
-        cell.set_fontsize(9)
+table.set_fontsize(10)
+table.scale(1.2, 2)  # Agrandir la taille du tableau
 
-plt.savefig('final_results/figs/CS_R2 deciles of momentum sorted porfolios with diff groups of macro.jpg', bbox_inches='tight')
-# Show the plot
+# Ajuster les marges autour du tableau
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)
+
+plt.suptitle('R2_CS: portefeuilles de déciles triés par momentum', fontsize=12, y=0.85)
+
+plt.savefig('final_results/figs/R2_CS portefeuilles de deciles tries par momentum.jpg', bbox_inches='tight')
+
 plt.show()

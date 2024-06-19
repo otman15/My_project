@@ -3,19 +3,29 @@
 Created on Thu May 30 16:32:42 2024
 
 @author: Otman CH
+
+Ici les fonctions pour lancer le modèle.
 """
 
 
 import torch
 import pickle
 import gc
-#from util import evaluate_sharp,long_short_portfolio,low_high_portfolio,calculateStatisticsDecile3,construct_decile_portfolios
+
 from the_model import FFN_1
 from HamiltonPCA import run_Hamilton_filter
-#from Plotting import long_and_short,plot_L_S_portf_ret,plot_dec_port_basedOn_pred_ret
+
 from Load_data import Load_data
 import os
 import time
+
+
+'''
+  La fonction run_model prépare les données, initialise les paramètres puis lance l'entrainement 
+pour un groupe donnée.
+  Les résulats d'évaluation sur l'ensemble 'test_set' et les meilleurs paramèters sont écrit sur
+un fichier pickle.
+'''
 
 def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):    
     
@@ -26,8 +36,6 @@ def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):
     data_train= data.get_train()
     data_valid = data.get_val()
     data_test = data.get_test()
-    
-    #test_variables = data.get_var_names()
        
     Xtest_m, Ytest, mask_test = data_test
     
@@ -39,7 +47,7 @@ def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):
     
     best_params = None
        
-    ######################################"
+    ############################################
     model.train_model(device,groupe,seed,model, model_params, data_train, data_valid,
                   printFreq=50, max_patience=300)
     ############################################
@@ -64,25 +72,38 @@ def run_model(seed,char_paths, macro_prob_paths,groupe, device, save=False):
     del model
         
 
+'''
+Cette fonction execute run_model itérativement sur tous les groupe de données.
+Permet d'utiliser le gpu si disponible.
+Des pauses d'execution sont introduite entre les itérations pour soulager les processeurs.
+'''
 
 
-def run_all(save=False): 
-    # Check if the probabilities file exists
-    if not os.path.exists('macro_probabilities'):
+def run_all(save=False, Pause = True): 
+      
+    #On utilise les prob sans lag
+    macro_prob_paths = ('macro_probabilities/macro_tr_prob_sans_retard.pkl','macro_probabilities/macro_test_prob_sans_retard.pkl') 
+    
+    # Vérifier si les probabilités de régimes sont déja sur le disque 
+    if not (os.path.exists(macro_prob_paths[0]) and os.path.exists(macro_prob_paths[1])):
         print("running Hamilton filter")
         run_Hamilton_filter()
     else:
         print("Probabilities file already exists, execute run_Hamilton_filter() if you want to get and write prob again")
        
-    groupes = ['interest_exchange_rates', 'Prices', 'Stock_markets', 'Other', 'money_credit','Labor_market', 'Output_Income',  'Housing',
-               'Consumption_OR', None ,'all_vars', 'all_groups']
     
-    #using probs obtained without lag
+    groupes = ['Production_Revenus', 'Marche_de_travail', 'Logement','Conso_Ordres' , 
+               'Monnaie_credit', 'Taux_interet_change', 'Prix', 'Marches_Boursiers', 'Autres',
+               'Toutes_vars', None,'Tous_groupes']
+    
+    
     char_paths =("datasets/char/Char_train.npz", "datasets/char/Char_valid.npz" , "datasets/char/Char_test.npz")
-    macro_prob_paths = ('macro_probabilities/macro_tr_prob_no_lag.pkl','macro_probabilities/macro_test_prob_no_lag.pkl')   
+      
        
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+    
+    
+    pause_duration = 10
     i = 1
     for groupe in groupes:
         print('\n')
@@ -99,8 +120,15 @@ def run_all(save=False):
         elapsed_time = time.time() - start_time
         print("group training time = " ,elapsed_time)
         i=i+1
-        gc.collect()  # Explicitly call garbage collector
-        torch.cuda.empty_cache()  # Free up GPU memory if used
+        gc.collect()  # Appeler garbage collector explicitement 
+        torch.cuda.empty_cache()  
+        
+        # Une pause optionelle entre les itérations 
+        if (Pause and i<11):
+            pause_duration = pause_duration + 30  
+            print(f"Pausing execution for {pause_duration} seconds...")
+            time.sleep(pause_duration)       
+            print("Resuming execution after pause")
 
 
 

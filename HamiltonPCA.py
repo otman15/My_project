@@ -11,35 +11,40 @@ import pickle
 
 '''
 Hamilton class:
-    takes univariate or multivariate time seris, apply a hamilton filter and kim smoother
-    and compute the filtered and smoothed probablity regimes.
-    if data is used to compute filter params (training data), the kim smoother is used since
-    it s supposed we have access to all data.
+  Prend des séries temporelles univariées ou multivariées, applique un filtre de Hamilton et un lissage de Kim
+et calcule les régimes de probabilité filtrés et lissés.
+si les données sont utilisées pour calculer les paramètres du filtre (données d'entraînement), le lissage de Kim est utilisé car
+on suppose que nous avons accès à toutes les données.
+
+  Si de nouvelles données de test sont données pour prédire de nouveaux régimes de probabilités, nous supposons que nous n'avons pas
+accès à toute la série temporelle mais seulement aux observations présentes, donc le lissage de Kim n'est pas
+appliqué mais les paramètres entraînés et la dernière probabilité sont utilisés pour inférer de nouvelles probabilités.
+
+  Le code dans la classe est basé sur : 
+        Handbook of Econometrics, Volume 1 V, 
+    édité par R.F. Engle et D.L. McFadden, chapitre 50 State Space Models, 
+    4 Variables d'état à valeurs discrètes.
     
-    if a new test data is given to predict new regime probabilites, we suppose we don't have 
-    access to all the time series but only to present observations, so the kim smoother is not
-    applied but the trained params and last probablity are used to infer new probablities.
-    
-    The code in the class is based on the article: Handbook of Econometrics, Volume 1 V, 
-    Edited by R.F. Engle and D.L. McFadden, chapter 50 State Space Models, 
-    4  Discrete valued state variables.
-    
-    Also it s based on the code Programs for estimation of Markov switching models using the EM algorithm. in
-    the web page : https://econweb.ucsd.edu/~jhamilto/software.htm#Markov
+      Hamilton 1989: A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle: section 4 
+     James D. Hamilton : Regime-Switching Models 2005
+
+Il est également basé sur le code Programs for estimation of Markov switching models using the EM algorithm.
+sur la page web : https://econweb.ucsd.edu/~jhamilto/software.htm#Markov
+
     
 '''
 
 
 
-class HamiltonKimModel: # use the model of Hamilton to get filtered probabilities ans kim smoothing
-    def __init__(self, data, lag=True):
+class HamiltonKimModel:
+    def __init__(self, data, retard=True): # retard = lag
 
-        if data.ndim == 1:  # Univariate time series
-            data = data[np.newaxis, :]  # Convert to 2D array with one row
-        self.lag = lag
-        self.y = data[:, 1:]  # Include all elements except the first one for each series
-        if self.lag:
-            self.x = data[:, :-1]  # Include all elements except the last one for each series
+        if data.ndim == 1:  # # Série temporelle univariée
+            data = data[np.newaxis, :]  # Convertir en tableau 2D avec une seule ligne
+        self.retard = retard
+        self.y = data[:, 1:]  # Inclure tous les éléments sauf le premier pour chaque série
+        if self.retard:
+            self.x = data[:, :-1]  # Inclure tous les éléments sauf le dernier pour chaque série
         self.param = None
     
     
@@ -48,7 +53,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
 
         n_series = self.y.shape[0]
 
-        if self.lag:
+        if self.retard:
             const,beta,sigma, p,q = self.reshape_params(param, n_series)
         else: const,sigma, p,q = self.reshape_params(param, n_series)
                    
@@ -58,17 +63,17 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         S = np.array([rho, 1 - rho])
         
 
-        #  filtered probability
+        #  probabilité filtrée
         fp = np.zeros((nobs, 2))
 
         loglike = 0
         for t in range(nobs):
-            # Previous state
+            # État précédent
             S_prev = [S[1],S[0]]
-            # Regression estimation
+            # Estimation de régression
             mu0 = np.zeros(n_series)
             mu1 = np.zeros(n_series)
-            if self.lag:
+            if self.retard:
                     mu0 = [const[n, 0] + beta[n, 0] * self.x[n, t] for n in range(n_series)]
                     mu1 = [const[n, 1] + beta[n, 1] * self.x[n, t] for n in range(n_series)]
 
@@ -76,28 +81,28 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
                     mu0 = const[:, 0]
                     mu1 = const[:, 1]
 
-            # Densities under the two regimes at t
+            # Densités sous les deux régimes à t
             fy_g_st0 = 1
             fy_g_st1 = 1
-            for n in range(n_series):# independent observations f(y1,y2,..) = f(y1)*f(y2)*....
+            for n in range(n_series):# Par suppposition : Observations indépendantes f(y1, y2, ...) = f(y1) * f(y2) * ...
                 fy_g_st0 *= (1 / np.sqrt(2 * np.pi * sigma[n, 0] ** 2)) * np.exp(-((self.y[n, t] - mu0[n]) ** 2) / (2 * sigma[n, 0] ** 2))
                 fy_g_st1 *= (1 / np.sqrt(2 * np.pi * sigma[n, 1] ** 2)) * np.exp(-((self.y[n, t] - mu1[n]) ** 2) / (2 * sigma[n, 1] ** 2))
                 
             p1 = [S_prev[0] * p * fy_g_st0, S_prev[0] * (1 - p) * fy_g_st1,
                    S_prev[1] * (1 - q) * fy_g_st0,S_prev[1] * q * fy_g_st1]
            
-            # Density of yt
+            # Densité yt
             f_yt = p1[0]+ p1[1]+ p1[2]+ p1[3]
 
             if f_yt < 0 or np.isnan(f_yt):
                 loglike = -100000000
                 break
             
-            # State at t+1 given t
+            # État à t+1 étant donné t
             S[1] = (p1[0]+p1[2]) / f_yt
             S[0] = (p1[1]+ p1[3]) / f_yt
 
-            fp[t, :] = [S[1], S[0]]  # Filtered probabilities
+            fp[t, :] = [S[1], S[0]]  
 
             loglike += np.log(f_yt)
 
@@ -106,7 +111,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
     def reshape_params(self, param, n_series):
 
         
-        if self.lag:
+        if self.retard:
             const = param[:n_series*2].reshape(n_series, 2)
             beta = param[n_series*2:n_series*4].reshape(n_series, 2)
             sigma = param[n_series*4:n_series*6].reshape(n_series, 2)
@@ -122,7 +127,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
             q = 1 / (1 + np.exp(-p8))
             return const, sigma, p,q
    
-    def predicting(self, new_obs):# applaying the filter one time to get the filtered probabilities
+    def predicting(self, new_obs):# Appliquer le filtre une fois pour obtenir les probabilités filtrées
         
         param = self.param
         n_series = self.y.shape[0]
@@ -130,12 +135,12 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         new_y = new_obs if new_obs.ndim > 1 else new_obs[np.newaxis, :]
         last_y = self.y[:, -1].reshape(n_series, 1)
         combined_y = np.hstack((last_y, new_y))
-        if self.lag:
-            self.x = combined_y[:, :-1]  # All but the last element
-        self.y = combined_y[:, 1:]  # All but the first element
+        if self.retard:
+            self.x = combined_y[:, :-1]  
+        self.y = combined_y[:, 1:] 
         E0_t, E1_t = initial_probs
         
-        if self.lag:
+        if self.retard:
             const,beta,sigma, p,q = self.reshape_params(param, n_series)
         else: const,sigma, p,q = self.reshape_params(param, n_series)
             
@@ -145,45 +150,39 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         rho = (1 - p) / (2 - q - p)
         S = np.array([rho, 1 - rho])
         
- 
-        #  filtered probability
         fp = np.zeros((nobs, 2))
  
  
         for t in range(nobs):
-            # Previous state
+
             S_prev = [S[1],S[0]]
-            # Regression estimation
+
             mu0 = np.zeros(n_series)
             mu1 = np.zeros(n_series)
-            if self.lag:
+            if self.retard:
                     mu0 = [const[n, 0] + beta[n, 0] * self.x[n, t] for n in range(n_series)]
                     mu1 = [const[n, 1] + beta[n, 1] * self.x[n, t] for n in range(n_series)]
  
             else:
                     mu0 = const[:, 0]
                     mu1 = const[:, 1]
- 
-            # Densities under the two regimes at t
+
             fy_g_st0 = 1
             fy_g_st1 = 1
-            for n in range(n_series):# independent observations f(y1,y2,..) = f(y1)*f(y2)*....
+            for n in range(n_series):
                 fy_g_st0 *= (1 / np.sqrt(2 * np.pi * sigma[n, 0] ** 2)) * np.exp(-((self.y[n, t] - mu0[n]) ** 2) / (2 * sigma[n, 0] ** 2))
                 fy_g_st1 *= (1 / np.sqrt(2 * np.pi * sigma[n, 1] ** 2)) * np.exp(-((self.y[n, t] - mu1[n]) ** 2) / (2 * sigma[n, 1] ** 2))
                 
             p1 = [S_prev[0] * p * fy_g_st0, S_prev[0] * (1 - p) * fy_g_st1,
                    S_prev[1] * (1 - q) * fy_g_st0,S_prev[1] * q * fy_g_st1]
-           
-            # Density of yt
+
             f_yt = p1[0]+ p1[1]+ p1[2]+ p1[3]
- 
-            # State at t+1 given t
+
             S[1] = (p1[0]+p1[2]) / f_yt
             S[0] = (p1[1]+ p1[3]) / f_yt
  
-            fp[t, :] = [S[1], S[0]]  # Filtered probabilities
- 
- 
+            fp[t, :] = [S[1], S[0]]  #
+
  
         return {'fp': fp}
         
@@ -193,26 +192,25 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
 
                    
 
-    def smoothing(self): # get the smoothed probabilities
+    def smoothing(self): # obtenir les probabilités lissées
         p7, p8 = self.param[-2:]
 
         nobs = self.y.shape[1]
 
-         # Transition probabilities
         p = 1 / (1 + np.exp(-p7))
         q = 1 / (1 + np.exp(-p8))
 
         sp = np.zeros((nobs, 2))
 
-        # get filtered estimates
+        # obtenir les estimations filtrées
         hf = self.hf
-        # Get filtered outputs
-        fp = hf['fp']  # Filtered probability
+
+        fp = hf['fp']  
 
         T = nobs
         sp[T - 1, :] = fp[T - 1, :]
 
-        # Iteration from T-1 to 1
+        # Obtenir les sorties filtrées
         for is_ in range(T - 2, -1, -1):
             p1 = (sp[is_ + 1, 0] * fp[is_, 0] * p) / (fp[is_, 0] * p + fp[is_, 1] * (1 - q))
             p2 = (sp[is_ + 1, 1] * fp[is_, 0] * (1 - p)) / (fp[is_, 0] * (1 - p) + fp[is_, 1] * q)
@@ -225,7 +223,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         return sp
 
     def fit_markov_switching_model(self):
-        if self.lag:
+        if self.retard:
             n_series = self.y.shape[0]
             init_guess = np.ones(n_series * 6 + 2)
             init_guess[-2:] = [3.0, 2.9]
@@ -250,7 +248,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         self.sp = self.smoothing()
 
 
-    def get_sp_hf(self):# kim smooth prob and hamilton filter results: filtered prob, predicted states
+    def get_sp_hf(self):# résultats: probabilité lissée et probabilité filtrée
         return {'smoothed_prob':self.sp, 'filtered_prob': self.hf['fp']}
 
 
@@ -263,7 +261,7 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
         else:
             plt.plot(dates,self.sp[:, 0], label='Regime 1', color='green', linewidth=3, linestyle='-')
             plt.plot(dates,self.sp[:, 1], label='Regime 2', color='blue', linewidth=3, linestyle='-')
-            n = 35 # Display every 10th label
+            n = 35 # Afficher chaque 10e étiquette
             plt.xticks(dates[::n], rotation=45, fontsize=8)
 
         plt.title('Smoothed probability')
@@ -284,13 +282,15 @@ class HamiltonKimModel: # use the model of Hamilton to get filtered probabilitie
 
 '''
 Group_macro_by_Class:
-    this class is used to group macro data by groupe: 10 groupes including a groupe of all data(no grouping).
-    it perform Pca on each group and yield the first component of each Pca groupe of macro
-    Outpout a dictionnary of (groupe: PC1)
-    it can also retrieve data and plot PC1
-    
-    I used here the same data used by Chen et Pelger (2023), it can be found on FRED-MD: A Monthly Database for Macroeconomic Research
-    for the grouping I used the same grouping used in the article https://research.stlouisfed.org/wp/2015/2015-012.pdf
+   Cette classe est utilisée pour regrouper les données macro par groupe : 10 groupes incluant
+un groupe contenant toutes les données (sans regroupement). 
+  Elle effectue une ACP sur chaque groupe et retourne le première composante de chaque groupe
+  macro. Elle produit un dictionnaire de la forme (groupe : PC1).
+  Elle peut également récupérer les données et tracer PC1.
+
+  J'utilise ici les mêmes données que celles utilisées par Chen et Al. (2023), 
+disponibles sur FRED-MD: A Monthly Database for Macroeconomic Research.
+ Pour le regroupement, j'utilise le même regroupement que celui décrit dans l'article https://research.stlouisfed.org/wp/2015/2015-012.pdf
 '''
 
 
@@ -301,18 +301,17 @@ class Group_macro_Pca:
         self.data1 = data1
         self.scaled = 'non scaled'
         self.data_dict = self.group()
-       # self.PC1 = {}
-       # self.explained_variance_ratio = {}
-        self.groups = ['Output_Income', 'Labor_market', 'Housing','Consumption_OR' , 'money_credit',
-                       'interest_exchange_rates', 'Prices', 'Stock_markets', 'Other', 'all_vars']
+
+        self.groups = ['Production_Revenus', 'Marche_de_travail', 'Logement','Conso_Ordres' , 'Monnaie_credit',
+                       'Taux_interet_change', 'Prix', 'Marches_Boursiers', 'Autres', 'Toutes_vars']
 
     def group(self):
         #group1 = data1.columns[1:20]
-        Output_Income1 = ['RPI', 'W875RX1', 'INDPRO', 'IPFPNSS',  'IPFINAL','IPCONGD', 'IPDCONGD', 'IPNCONGD', \
+        Production_Revenus1 = ['RPI', 'W875RX1', 'INDPRO', 'IPFPNSS',  'IPFINAL','IPCONGD', 'IPDCONGD', 'IPNCONGD', \
                         'IPBUSEQ',  'IPMAT','IPDMAT', 'IPNMAT', 'IPMANSICS', 'IPB51222S',  'IPFUELS', 'CUMFNS']
 
         #group2_names = data1.columns[20:48]
-        Labor_market2 = ['HWI', 'HWIURATIO', 'CLF16OV', 'CE16OV', 'UNRATE', 'UEMPMEAN',
+        Marche_de_travail2 = ['HWI', 'HWIURATIO', 'CLF16OV', 'CE16OV', 'UNRATE', 'UEMPMEAN',
                'UEMPLT5', 'UEMP5TO14', 'UEMP15OV', 'UEMP15T26', 'UEMP27OV', 'CLAIMSx',
                'PAYEMS', 'USGOOD', 'CES1021000001', 'USCONS', 'MANEMP', 'DMANEMP',
                'NDMANEMP', 'SRVPRD', 'USTPU', 'USWTRADE', 'USTRADE', 'USFIRE',
@@ -321,16 +320,16 @@ class Group_macro_Pca:
 
         #group3_names = data1.columns[48:58] # 49 ....  61
 
-        Housing3 = ['HOUST', 'HOUSTNE', 'HOUSTMW', 'HOUSTS', 'HOUSTW', 'PERMIT', 'PERMITNE',
+        Logement3 = ['HOUST', 'HOUSTNE', 'HOUSTMW', 'HOUSTS', 'HOUSTW', 'PERMIT', 'PERMITNE',
                'PERMITMW', 'PERMITS', 'PERMITW']
 
         #group4 = data1.columns[3:6]
 
-        Consumption_OR4 = ['DPCERA3M086SBEA', 'CMRMTSPLx', 'RETAILx', 'AMDMNOx', 'AMDMUOx', 'BUSINVx', 'ISRATIOx']
+        Conso_Ordres4 = ['DPCERA3M086SBEA', 'CMRMTSPLx', 'RETAILx', 'AMDMNOx', 'AMDMUOx', 'BUSINVx', 'ISRATIOx']
 
         #group5 = data1.columns[62:72]
 
-        money_credit5 = ['M1SL', 'M2SL', 'M2REAL', 'AMBSL', 'TOTRESNS', 'NONBORRES', 'BUSLOANS',
+        Monnaie_credit5 = ['M1SL', 'M2SL', 'M2REAL', 'AMBSL', 'TOTRESNS', 'NONBORRES', 'BUSLOANS',
                'REALLN', 'NONREVSL', 'CONSPI', 'MZMSL', 'DTCOLNVHFNM', 'DTCTHFNM', 'INVEST']
 
         #groupr6  = data1.columns[76:97]
@@ -342,7 +341,7 @@ class Group_macro_Pca:
 
         #groupr7  = data1.columns[97:117]
 
-        Prices7 = ['WPSFD49207', 'WPSFD49502', 'WPSID61', 'WPSID62', 'OILPRICEx', 'PPICMM',
+        Prix7 = ['WPSFD49207', 'WPSFD49502', 'WPSID61', 'WPSID62', 'OILPRICEx', 'PPICMM',
                'CPIAUCSL', 'CPIAPPSL', 'CPITRNSL', 'CPIMEDSL', 'CUSR0000SAC',
                'CUSR0000SAD', 'CUSR0000SAS', 'CPIULFSL', 'CUSR0000SA0L2',
                'CUSR0000SA0L5', 'PCEPI', 'DDURRG3M086SBEA', 'DNDGRG3M086SBEA',
@@ -350,27 +349,27 @@ class Group_macro_Pca:
 
         #group8 = data1.columns[72:76]
 
-        Stock_markets8 = ['S&P 500', 'S&P: indust', 'S&P div yield', 'S&P PE ratio','VXOCLSx']
+        Marches_Boursiers8 = ['S&P 500', 'S&P: indust', 'S&P div yield', 'S&P PE ratio','VXOCLSx']
 
 
 
         self.data_dict = {
-            'Output_Income': self.data1[Output_Income1], #'Output_Income': self.data1[Output_Income1].values
-            'Labor_market': self.data1[Labor_market2],
-            'Housing': self.data1[Housing3],
-            'Consumption_OR': self.data1[Consumption_OR4],
-            'money_credit': self.data1[money_credit5],
-            'interest_exchange_rates': self.data1[interest_exchange_r6],
-            'Prices': self.data1[Prices7],
-            'Stock_markets': self.data1[Stock_markets8],
-            'Other': self.data1.iloc[:,125:],
-            'all_vars': self.data1.iloc[:,1:]
+            'Production_Revenus': self.data1[Production_Revenus1], #'Production_Revenus': self.data1[Production_Revenus1].values
+            'Marche_de_travail': self.data1[Marche_de_travail2],
+            'Logement': self.data1[Logement3],
+            'Conso_Ordres': self.data1[Conso_Ordres4],
+            'Monnaie_credit': self.data1[Monnaie_credit5],
+            'Taux_interet_change': self.data1[interest_exchange_r6],
+            'Prix': self.data1[Prix7],
+            'Marches_Boursiers': self.data1[Marches_Boursiers8],
+            'Autres': self.data1.iloc[:,125:],
+            'Toutes_vars': self.data1.iloc[:,1:]
 
         }
 
 
     def get_data(self, variable_name=None):
-       # use try catch here if variable_name == None : variable_name = self.groups
+      
         self.group()
         if variable_name:
             if variable_name in self.data_dict:
@@ -387,7 +386,7 @@ class Group_macro_Pca:
             return [],[]
         self.PC1 = {}
         self.explained_variance_ratio = {}
-        # use try catch here , groups is a list
+        
         if groups == None : groups = self.groups
         self.group()
 
@@ -397,7 +396,7 @@ class Group_macro_Pca:
             data = self.data_dict[group]
             if scaled == 'scaled':
                data = scaler.fit_transform(data)
-               self.scaled = 'scaled'  # Just to memorize if data is scaled or not
+               self.scaled = 'scaled'  
 
             pca = PCA()
             pca.fit(data)
@@ -413,9 +412,9 @@ class Group_macro_Pca:
     def plot_Pca(self, group, dates):
         plt.figure(figsize=(12, 6))
         plt.subplot(2, 2, 1)
-        #try catch group
+        
         plt.plot(dates,self.PC1[group])
-        n = 35  # Display every 10th label
+        n = 35  
         plt.xticks(dates[::n], rotation=45, fontsize=8)
         plt.title(f'Plot of PC 1: {group} _ {self.scaled}')
         plt.ylabel(' PC1 time series')
@@ -430,14 +429,17 @@ class Group_macro_Pca:
 
 
 '''
-Thsi class takes as inpout the macro data, uses the Group_macro_pca class to get the pca of each group, apply the hamilton 
-filter class on each time series of PC1 group and get the smoothed regime prob for training_val data and filtered probablities 
-of regimes  for the test set.
+  Cette classe prend en entrée les données macroéconomiques, utilise la classe Group_macro_pca
+pour obtenir l'ACP de chaque groupe, applique la classe Hamilton Filter à chaque série temporelle
+du groupe PC1, puis obtient les probabilités de régime lissées pour les données 
+d'entraînement/validation et les probabilités filtrées de régime pour l'ensemble de test.
 '''
 
 class Macro_group_probs:
-    def __init__(self, path_val_tr, path_test, all_groups = True):
+    def __init__(self, path_val_tr, path_test, Tous_groupes = True, retard='avec_retard'):
         
+        is_retard = retard=='avec_retard'
+        self.retard = retard
         data_tr = pd.read_csv(path_val_tr)
         data_test = pd.read_csv(path_test)
 
@@ -447,46 +449,45 @@ class Macro_group_probs:
         data_pca_tr, _ = group_data_tr.get_Pca('scaled')
         data_pca_test, _ = group_data_test.get_Pca('scaled')
         
-        # If must use the 9 PC1 times series in a multivariate hamilton filter create data with the 9 time series goups
-        if all_groups:
+        # Si vous devez utiliser toutes les 9 séries temporelles de PC1 dans le filtre de Hamilton multivarié, créez une structure de données avec les 9 groupes de séries temporelles.
+        if Tous_groupes:
             all_tr = []
             all_test = []
             for gr in data_pca_tr.keys():
                 
-              if gr != 'all_vars': # all vars means all data so it s not a groupe.
+              if gr != 'Toutes_vars': 
                 all_tr.append(data_pca_tr[gr])
                 all_test.append(data_pca_test[gr])
                 
             all_tr = np.array(all_tr)
             all_test = np.array(all_test)
             
-            data_pca_tr['all_groups'] = all_tr
-            data_pca_test['all_groups'] = all_test
+            data_pca_tr['Tous_groupes'] = all_tr
+            data_pca_test['Tous_groupes'] = all_test
 
         self.prob_tr = {}
         self.prob_test = {}
 
         for groupe in data_pca_tr.keys():
             
-            model = HamiltonKimModel(data_pca_tr[groupe], False) 
-            model.run() # run hamilton filter for each groupe of PC1 and also for the 9 PC1 of all the groups
+            model = HamiltonKimModel(data_pca_tr[groupe], is_retard) 
+            model.run() # Exécutez le filtre de Hamilton pour chaque groupe de PC1 ainsi que pour les 9 PC1 de l'ensemble des groupes.
             
             results_tr = model.get_sp_hf() 
-            smoothed_prob_tr = results_tr['smoothed_prob'] # smoothed prob for train valid data
-            smoothed_prob_tr = np.concatenate(([smoothed_prob_tr[:, 0][0]], smoothed_prob_tr[:, 0])) # the filter doesnt yild the first prob so we make it equal as the second
+            smoothed_prob_tr = results_tr['smoothed_prob'] 
+            smoothed_prob_tr = np.concatenate(([smoothed_prob_tr[:, 0][0]], smoothed_prob_tr[:, 0])) # Le filtre ne produit pas la première probabilité, je la fixe égale à la deuxième.
             
-            results_test= model.predicting(new_obs=data_pca_test[groupe]) # get filterd probabilites for test set macro
+            results_test= model.predicting(new_obs=data_pca_test[groupe]) 
             filtered_prob_test= results_test['fp'][:, 0]
-            #####filtered_prob_test = np.concatenate(([filtered_prob_test[:, 0][0]], filtered_prob_test[:, 0]))
             
             self.prob_tr[groupe] = smoothed_prob_tr
             self.prob_test[groupe] = filtered_prob_test
             
 
     def write_to_file(self, folder_path):
-        with open(folder_path+'/macro_tr_prob_no_lag.pkl', 'wb') as file:
+        with open(folder_path+'/macro_tr_prob_' + self.retard + '.pkl', 'wb') as file:
             pickle.dump(self.prob_tr, file)
-        with open(folder_path+'/macro_test_prob.pkl_no_lag', 'wb') as file:
+        with open(folder_path+'/macro_test_prob_'+ self.retard +'.pkl', 'wb') as file:
             pickle.dump(self.prob_test, file)
 
     def get_group_prob(self):
@@ -494,11 +495,12 @@ class Macro_group_probs:
     
 
 '''
-this function groupes data, run pca on the groupes and run hamilton filter on each group and also on all groups,
-it get macro prob associated with each case
+  Cette fonction regroupe les données, applique l'ACP sur les groupes, exécute le filtre de Hamilton
+sur chaque groupe ainsi que sur l'ensemble des groupes, et obtient les probabilités de régime associées
+à chaque cas.
 '''
         
-def run_Hamilton_filter():
+def run_Hamilton_filter(retard='sans_retard'):
     macro_tr = np.load('datasets/macro/macro_train.npz')
     macro_val = np.load('datasets/macro/macro_valid.npz')
     macro_test = np.load('datasets/macro/macro_test.npz')
@@ -522,7 +524,7 @@ def run_Hamilton_filter():
     tr_val_macro_path = 'datasets/train_val_macro.csv'
     test_macro_path = 'datasets/test_macro.csv'
     
-    hamilton = Macro_group_probs(tr_val_macro_path,test_macro_path, all_groups= True)
+    hamilton = Macro_group_probs(tr_val_macro_path,test_macro_path, Tous_groupes= True, retard = retard)
     prob_tr_val, prob_test = hamilton.get_group_prob()
     hamilton.write_to_file('macro_probabilities') 
 
@@ -530,4 +532,6 @@ def run_Hamilton_filter():
     
    
   
-#to write prob on files run : run_Hamilton_filter()   
+#Pour écrire les probabilités dans des fichiers, exécutez la fonction `run_Hamilton_filter()`
+#run_Hamilton_filter('avec_retard') 
+#run_Hamilton_filter('sans_retard') 

@@ -4,25 +4,33 @@ Created on Wed May 29 21:45:49 2024
 
 @author: Otman CH
 
-This class is used to construct training, validation and test datasets.
+  Cette classe est utilisée pour construire des ensembles de données d'entraînement,
+de validation et de test.
 
+  Elle prend en entrée les chemins des données compressées npz pour l'entraînement,
+la validation et le test, ainsi que le chemin des probabilités de régime 
+et le groupe de données macro utilisé pour construire ces probabilités.
+Si `groupe = None`, aucune probabilité de régime ne sera utilisée et seules
+les caractéristiques seront utilisées dans le modèle.
 
-It takes the the paths of train, valid and test compressednpz data, it takes also the path of regime 
-probabilities as well as the groupe of macro data used to construct thos probablities.
-If goupe = None no regime probabilities will be use only characterestics will be used in the model.
+ Tout d'abord, un masque est construit pour ignorer les caractéristiques non disponibles
+avant de les passer au modèle (données marquées comme -99).
+Ce masque est appliqué aux caractéristiques ainsi qu'aux probabilités macro 
+si elles sont utilisées.
 
-First a mask is constructed to ignore unavailabel data before passing it to the 
-model ( datamarked as -99), the mask is applied on characteristics as well as on macro probabilities
+ Si les données macro sont utilisées, les données seront construites en concaténant
+les caractéristiques, les probabilités et le produit caractéristiques*probabilités
+pour chaque mois et chaque actif :
+data = [char[mask], p[mask]*char[mask], p[mask]]
 
-if macro is used: the data will be constructed by concatenating charactersitics, probabilites 
-and the product characteristics*probabilites in each month: 
-    data = [char[mask], p[mask]*char[mask], p[mask]]
-if not : data = char[mask]
+Sinon, les données seront simplement les caractéristiques :
+data = char[mask]
 
-this is applied for train, validation and test.
+Cela est appliqué pour l'ensemble d'entraînement, de validation et de test.
 
-The class has getters to retreive data (x,y,mask) for each dataset, and a get to retrieve 
-the characteristics names.
+ La classe dispose de méthodes pour récupérer les données (x, y, masque)
+pour chaque ensemble de données, ainsi qu'une méthode pour récupérer
+les noms des caractéristiques.
 
 """
 
@@ -33,7 +41,7 @@ import pickle
 class Load_data():
 
     def __init__(self,train_tmp_path, test_tmp_path, valid_tmp_path, macro_paths=None, groupe=None):
-        # macro paths macro to train_val and test paths in this order
+        # Chemins des données macro d'entraînement/validation et de test dans cet ordre
             
         train_tmp = np.load(train_tmp_path)
         test_tmp = np.load(test_tmp_path)
@@ -42,7 +50,7 @@ class Load_data():
         data_test = test_tmp['data']
         data_val = val_tmp['data']
         
-        # Divide into inputs and outputs
+        # Diviser en entrées et sorties
         Ytrain = data_train[:, :, 0]
         Ytest = data_test[:, :, 0]
         Yval = data_val[:, :, 0]
@@ -53,7 +61,7 @@ class Load_data():
 
         self.var_names = test_tmp['variable'][1:]
         
-        # Create masks for the training, validation and test data
+        # Créer des masques pour les données d'entraînement, de validation et de test
         mask_train = (Ytrain != -99.99)
         mask_test = (Ytest != -99.99)
         mask_valid = (Yval != -99.99)
@@ -78,7 +86,7 @@ class Load_data():
             with open(macro_paths[1], 'rb') as file:
                 prob_test_macro = pickle.load(file)
             
-            # train and val have same prob file since hamilton filter was applied on all data
+            # Les ensembles d'entraînement et de validation ont le même fichier de probabilités puisque le filtre de Hamilton a été appliqué sur les deux en même temps.
             prob_tr_val=prob_tr_val_macro[groupe]
             
             prob_train = prob_tr_val[:Xtrain_Ch.shape[0]].reshape(-1,1)
@@ -88,11 +96,11 @@ class Load_data():
 
 
             NSize = Ytrain.shape[1]
-            macro_train = prob_train.repeat(NSize, 1) # make a proba for each asset
-            macro_masked_tr = macro_train[mask_train].reshape(-1,1) # mask for unavailable assets char            
+            macro_train = prob_train.repeat(NSize, 1) # Créer une probabilité pour chaque actif
+            macro_masked_tr = macro_train[mask_train].reshape(-1,1) # Créer une probabilité pour chaque actif            
             char_masked = Xtrain_Ch[mask_train]
             
-            char_mac_m = char_masked * macro_masked_tr # macro prob char combination
+            char_mac_m = char_masked * macro_masked_tr # combinaison macro prob et char
 
             Xtrain_m = np.concatenate((char_masked,char_mac_m, macro_masked_tr), axis=1)
             
@@ -101,7 +109,7 @@ class Load_data():
             I_macro_test = prob_test.repeat(NSize, 1)
             I_macro_masked_test = I_macro_test[mask_test].reshape(-1,1)
             I_m_test = Xtest_Ch[mask_test]
-            # multiply
+            
             I_I_test = I_m_test * I_macro_masked_test
             Xtest_m = np.concatenate((I_m_test, I_I_test,I_macro_masked_test), axis=1)
             del NSize,I_macro_test,I_macro_masked_test,I_m_test
@@ -110,7 +118,7 @@ class Load_data():
             I_macro_val = prob_val.repeat(NSize, 1)
             I_macro_masked_val = I_macro_val[mask_valid].reshape(-1,1)
             I_masked_val= Xval_Ch[mask_valid]
-            # multiply
+            
             I_I_val = I_masked_val * I_macro_masked_val
             Xval_m = np.concatenate((I_masked_val,I_I_val, I_macro_masked_val), axis=1)
             del NSize,I_macro_val,I_macro_masked_val,I_masked_val

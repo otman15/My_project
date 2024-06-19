@@ -12,15 +12,17 @@ import pickle
 import pandas_datareader.data as web
 
 
+
+
 #################################################plot the states of regimes#################################################"
-def plot_macro_probs(paths, save=False, lag =' no_lag'):
+def plot_macro_probs(paths, save=False, lag ='sans_retard'):
     data = web.DataReader('USREC', 'fred', start='1967-01-01', end='2016-12-31')
     data = data.reset_index()
     recession_starts = data['DATE'][data['USREC'].diff() == 1]
     recession_ends = data['DATE'][data['USREC'].diff() == -1]
     
     
-    # Load the dictionaries from the pickle files
+    # Charger les dictionnaires à partir des fichiers pickle
     time_series_tr = {}
     time_series_test = {}
     for path_tr, path_test in paths:
@@ -30,19 +32,19 @@ def plot_macro_probs(paths, save=False, lag =' no_lag'):
 
     num_series = len(time_series_tr)
 
-    num_months = len(time_series_tr['Output_Income']) + len(time_series_tr['Output_Income'])
+    num_months = len(time_series_tr['Production_Revenus']) + len(time_series_tr['Production_Revenus'])
     dates = pd.date_range(end='20161201', periods=num_months, freq='MS')
     
-    # Calculate the number of rows needed (5 rows for 10 plots in 2 columns)
+    
     num_rows = (num_series + 1) // 2
 
-    # Create subplots with 2 columns
+   
     fig, axs = plt.subplots(num_rows, 2, figsize=(16, num_rows * 3.5))
 
-    # Flatten the axs array for easy iteration
+    
     axs = axs.flatten()
 
-    # Iterate through the dictionary and plot each time series
+    # Itérer à travers le dictionnaire et tracer chaque série temporelle
     for i, key in enumerate(time_series_tr.keys()):
         tr = time_series_tr[key]
         test = time_series_test[key]
@@ -52,21 +54,18 @@ def plot_macro_probs(paths, save=False, lag =' no_lag'):
         for start, end in zip(recession_starts, recession_ends):
             axs[i].axvspan(start, end, color='grey', alpha=0.5)
 
-    # Hide any empty subplots
     for i in range(num_series, len(axs)):
         fig.delaxes(axs[i])
 
-    # Adjust layout
     plt.tight_layout()
 
     if save:
         plt.savefig('final_results/figs/macro_prob_'+ lag +'.png')
     
-    # Show the plot
     plt.show()
 
 
-################## plot decile portfolio sorted based on predicted returns###############################################
+################## Tracer le portefeuille décile trié en fonction des rendements prédits.###############################################
 
 def plot_dec_port_basedOn_pred_ret(potf_ret, macro_groupe, save = False):
     dates = pd.date_range(end='20161201', periods=potf_ret.shape[0], freq='MS')
@@ -81,16 +80,16 @@ def plot_dec_port_basedOn_pred_ret(potf_ret, macro_groupe, save = False):
         s_cumsum = s.cumsum()
         plt.scatter(s_cumsum.index, s_cumsum / s.std(), s=10, label=decile)
     
-    plt.title('Cumulative Returns of Decile Portfolios, ' + 'macro groupe:' + macro_groupe)
+    plt.title('Rendements cumulatifs des portefeuilles déciles, ' + 'macro groupe:' + macro_groupe)
     plt.xlabel('Time')
-    plt.ylabel('Cumulative Excess Return based on R_hat')
-    plt.legend(title='Decile Portfolios')
+    plt.ylabel('Rendement cumulatif basé sur \( \hat{R} \)t')
+    plt.legend(title='Portefeuilles déciles')
     plt.grid(True)
-    if save: plt.savefig('plots/'+'Cumulative Returns of Decile Portfolios'+macro_groupe+'.pdf') 
+    if save: plt.savefig('plots/'+'Rendements cumulatifs des portefeuilles déciles'+macro_groupe+'.pdf') 
     plt.show()
     
 
-##################################long_short portfolio returns####################################################""
+#################################Rendements du portefeuille long-short####################################################""
 
 def plot_L_S_portf_ret(ls_returns, macro_groupe, save = False):
     
@@ -103,18 +102,18 @@ def plot_L_S_portf_ret(ls_returns, macro_groupe, save = False):
     
     plt.scatter(cumulative_returns.index, cumulative_returns/cumulative_returns.std(), s = 10, label='Long-Short Portfolio')
     
-    plt.title('Cumulative Returns of Long-Short Portfolio, ' + 'macro groupe:' + macro_groupe)
-    plt.xlabel('Time')
-    plt.ylabel('Cumulative Return')
-    plt.legend(title='Portfolio')
+    plt.title('Rendements cumulatifs du portefeuille long-court, ' + 'macro groupe:' + macro_groupe)
+    plt.xlabel('Temps')
+    plt.ylabel('Rendement Cumulatif')
+    plt.legend(title='portefeuille LC')
     plt.grid(True)
-    if save: plt.savefig('plots/'+'Cumulative Returns of Long-Short Portfolio'+macro_groupe+'.pdf') 
+    if save: plt.savefig('plots/'+'Rendements cumulatifs du portefeuille long-short'+macro_groupe+'.pdf') 
     plt.show()
     
     
     
 
-###############################long_short  a part########################################"
+###############################long_short à part########################################"
 
 def long_and_short(long_returns, short_returns,long_short_returns,macro_groupe, save = False):
 
@@ -133,22 +132,22 @@ def long_and_short(long_returns, short_returns,long_short_returns,macro_groupe, 
     plt.plot(cumulative_short_returns.index, cumulative_short_returns/short_returns.std(), label='Short Portfolio')
     #plt.plot(cumulative_long_short_returns.index, cumulative_long_short_returns, label='Long-Short Portfolio')
     
-    plt.title('Cumulative Returns of Long, Short Portfolios, ' + 'macro groupe:' + macro_groupe)
-    plt.xlabel('Time')
-    plt.ylabel('Cumulative Return')
-    plt.legend(title='Portfolio')
+    plt.title('Rendements cumulatifs des portefeuilles long et court, ' + 'macro groupe:' + macro_groupe)
+    plt.xlabel('Temps')
+    plt.ylabel('Rendement Cumulatif')
+    plt.legend(title='portefeuilles')
     plt.grid(True)
-    if save: plt.savefig('plots/'+'Cumulative Returns of Long and Short Portfolios'+macro_groupe+'.pdf') 
+    if save: plt.savefig('plots/'+'Rendements cumulatifs des portefeuilles long et court'+macro_groupe+'.pdf') 
     plt.show()
     
     
 
-############################ multiple returns #######################################""
+############################ Rendements multiples #######################################""
 
 def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=False):
     n = len(potf_ret_list)
     if n != len(macro_group_list):
-        raise ValueError("Length of potf_ret_list and macro_group_list must be the same.")
+        raise ValueError("La longueur de potf_ret_list et macro_group_list doit être la même..")
 
     # Calculate the number of rows and columns for the subplots
     ncols = 3
@@ -166,10 +165,10 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
             s_cumsum = s.cumsum()
             axs[i].scatter(s_cumsum.index, s_cumsum , s=10, label=decile)
 
-        axs[i].set_title('Cumulative Returns, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
-        axs[i].set_xlabel('Time', fontsize=8)
-        axs[i].set_ylabel('Cumulative Return based on ret pred', fontsize=8)
-        axs[i].legend(title='Decile Portfolios',title_fontsize=10, fontsize=8)
+        axs[i].set_title('Rendements Cumulatifs, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
+        axs[i].set_xlabel('Temps', fontsize=8)
+        axs[i].set_ylabel('Rendement cumulatif basé sur les prédictions de rendement', fontsize=8)
+        axs[i].legend(title='Portefeuilles déciles',title_fontsize=10, fontsize=8)
         axs[i].grid(True)
 
     # Remove any unused subplots
@@ -179,21 +178,21 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
     plt.tight_layout()
 
     if save:
-        fig.savefig('final_results/figs/Cumulative_Returns_of_Decile_Portfolios_sorted_based_on_ret_pred.pdf')
+        fig.savefig('final_results/figs/Rendements cumulatifs des portefeuilles déciles triés en fonction des prédictions de rendement.pdf')
 
     plt.show()
 
 
     
     
-################################  plot multiple long short portf################################"
+################################  Tracer plusieurs portefeuilles long-short ################################"
 
 
 
 
 def plot_multi_L_S_portf_ret(ls_returns_list, macro_group_list, save=False):
   if len(ls_returns_list) != len(macro_group_list):
-      raise ValueError("Length of ls_returns_list and macro_group_list must be the same.")
+      raise ValueError("La longueur de ls_returns_list et macro_group_list doit être la même.")
       
   colors = plt.cm.viridis(np.linspace(0, 1, len(ls_returns_list)))
   markers = ['o', 's', 'D', '^', 'v', '<', '>', 'p', '*', 'h', 'H', 'd', 'P', 'X']
@@ -213,14 +212,14 @@ def plot_multi_L_S_portf_ret(ls_returns_list, macro_group_list, save=False):
                  markersize=2, 
                  label=f'{macro_group}')
 
-  plt.title('Cumulative Returns of Long-Short Portfolios',fontsize=10)
-  plt.xlabel('Time')
-  plt.ylabel('Cumulative Return')
+  plt.title('Rendements cumulatifs des portefeuilles long-courts',fontsize=10)
+  plt.xlabel('Temps')
+  plt.ylabel('Rendement Cumulatif')
   plt.legend(title='groupe of macro', title_fontsize=10, fontsize=9)
   plt.grid(True)
 
   if save:
-      plt.savefig('final_results/figs//Cumulative_Returns_of_diff_Long_Short_Portfolios.pdf')
+      plt.savefig('final_results/figs//Rendements cumulatifs des différents portefeuilles long-courts.pdf')
 
   plt.show()
     

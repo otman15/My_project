@@ -1,13 +1,26 @@
-This project is a part of my master's degree. The idea is to use macro data with characteristics to predict assets return. We use the data processed by Chen et (2023). We use a markov chain switching regime to detect the probabilities of the regimes of the economy. We use the Hamilton filter for this purpose. Add math and explication for Hamilton filter, kim smooting here: ************************************* We classify the macro data into 9 groups, perform PCA on those groups as well as on initial data without grouping to get 10 first principal components (PC1 of each group and the PC1 of the initial data without grouping).
+  Ce projet fait partie de mon diplôme de master. L'idée est d'utiliser des données macroéconomiques avec des caractéristiques pour prédire le rendement des actifs. 
+ On utilise les données traitées par Chen et (2023). On utilise  un changement de régime  de chaîne de Markov pour détecter les probabilités des régimes de l'économie.
+ On utilise le filtre de Hamilton à cet effet. 
 
-We combine those probabilities along with assets characteristics to predict monthly asset return. We use a Feed Forward Network. We feed the network with a matrix containing the characteristics, the probabilities, and the product of the characterstics with the probablities to take into account non linear interactions between charcterstics and regimes. Y(t) = f(x(t), p, p.x(t))
+ On classe les données macroéconomiques en 9 groupes, effectue une ACP sur ces groupes ainsi que sur les données initiales sans regroupement pour obtenir 10 premières
+composantes principales (PC1 de chaque groupe et la PC1 des données initiales sans regroupement).
 
-We experiment using the 10 PC1 of the groups of macro data. At each time we combine one group with the characteristics and train our model, we train our model without macro groups as well, so in fact we train the model with 11 diffrent data.
+ On combine ces probabilités avec les caractéristiques des actifs pour prédire le rendement mensuel des actifs. On utilise un réseau de neurones à propagation directe 
+(Feed Forward Network). On alimente le réseau avec une matrice contenant les caractéristiques, les probabilités et le produit des caractéristiques avec les probabilités
+pour prendre en compte les interactions non linéaires entre les caractéristiques et les régimes. Y(t) = f(x(t), p, p.x(t))
 
-So our models are : Y_i(t) = f(x(t), p_i, p_i.x(t)) where P_i = PC1(ith macro groups) for i (1...10) and P_i = 0 for i =0. P_i = 0 <----> no macro used.
+ On expérimente en utilisant les 10 PC1 des groupes de données macroéconomiques. À chaque fois, on combine un groupe avec les caractéristiques et entraînons notre modèle,
+ on entraîne également notre modèle sans groupes macroéconomiques, donc en fait on entraîne le modèle avec 11 données différentes.
 
-We devide the data into train validation and test sets, we use the validation data to find the best hyper_parameters (dropping_out, initial seed, learning rate, number of layers).
+Les modèles sont donc : Y_i(t) = f(x(t), p_i, p_i.x(t)) où P_i = PC1 (i-ème groupe macroéconomique) pour i (1...10) et P_i = 0 pour i = 0. P_i = 0 <----> pas de macro utilisé.
 
-We get the prediction, and use them to calculate the cumulative return and sharp ratios of Long_short porfolios, the cumulative return of decile sorted porfolios based on predctin return, the statistics of decile porfolios sorted based on some charactersitics. We plot the results and commment them.
+ On divise les données en ensembles d'entraînement, de validation et de test, on utilise les données de validation pour trouver les meilleurs hyper-paramètres
+(dropout, seed initial, taux d'apprentissage, nombre de couches).
 
-Refrence: Chen (2023), Hamilton (1994),...........
+ On obtient les prédictions et on les utilise pour calculer le rendement cumulatif et les ratios de Sharpe des portefeuilles long-short, le rendement cumulatif 
+des portefeuilles déciles triés en fonction du rendement prédit, les statistiques des portefeuilles déciles triés en fonction de certaines caractéristiques. 
+On traçons les résultats obtenus.
+
+Références : Chen et Al. (2023),
+             Hamilton(1989), Hamilton (1994)
+
