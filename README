@@ -1,4 +1,4 @@
-  Ce projet fait partie de mon diplôme de master. L'idée est d'utiliser des données macroéconomiques avec des caractéristiques pour prédire le rendement des actifs. 
+  Ce projet fait partie de mon programme de maîtrise. L'idée est d'utiliser des données macroéconomiques avec des caractéristiques pour prédire le rendement des actifs. 
  On utilise les données traitées par Chen et (2023). On utilise  un changement de régime  de chaîne de Markov pour détecter les probabilités des régimes de l'économie.
  On utilise le filtre de Hamilton à cet effet. 
 
@@ -22,5 +22,5 @@ des portefeuilles déciles triés en fonction du rendement prédit, les statisti
 On traçons les résultats obtenus.
 
 Références : Chen et Al. (2023),
-             Hamilton(1989), Hamilton (1994)
+             Hamilton(1989), Hamilton (2005)
 
