@@ -12,10 +12,12 @@ import pickle
 import pandas_datareader.data as web
 
 
+'''
+Ces fonctions aident à produir les différents graphes et les tableaux
+'''
 
-
-#################################################plot the states of regimes#################################################"
-def plot_macro_probs(paths, save=False, lag ='sans_retard'):
+#################################################Etats des régimes#################################################"
+def plot_macro_probs(paths, save=False, lag ='sans auto_regression'):
     data = web.DataReader('USREC', 'fred', start='1967-01-01', end='2016-12-31')
     data = data.reset_index()
     recession_starts = data['DATE'][data['USREC'].diff() == 1]
@@ -50,7 +52,7 @@ def plot_macro_probs(paths, save=False, lag ='sans_retard'):
         test = time_series_test[key]
         val = np.concatenate((tr, test))
         axs[i].scatter(dates, val)
-        axs[i].set_title(key + lag , fontsize=16)
+        axs[i].set_title(key + ' ' + lag , fontsize=16)
         for start, end in zip(recession_starts, recession_ends):
             axs[i].axvspan(start, end, color='grey', alpha=0.5)
 

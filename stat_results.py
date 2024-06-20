@@ -19,8 +19,8 @@ from Plotting import plot_multi_dec_port_basedOn_pred_ret,plot_multi_L_S_portf_r
 
 ############################################proba Regime #####################################################################""    
       
-plot_macro_probs([('macro_probabilities/macro_tr_prob_avec_retard.pkl', 'macro_probabilities/macro_test_prob_avec_retard.pkl')], save=True, lag= 'avec_retard')
-plot_macro_probs([('macro_probabilities/macro_tr_prob_sans_retard.pkl', 'macro_probabilities/macro_test_prob_sans_retard.pkl')], save=True, lag= 'sans_retard')  
+plot_macro_probs([('macro_probabilities/macro_tr_prob_avec_retard.pkl', 'macro_probabilities/macro_test_prob_avec_retard.pkl')], save=True, lag= 'avec autoregression')
+plot_macro_probs([('macro_probabilities/macro_tr_prob_sans_retard.pkl', 'macro_probabilities/macro_test_prob_sans_retard.pkl')], save=True, lag= 'sans autoregression')  
 
 
 
