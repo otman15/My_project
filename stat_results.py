@@ -152,30 +152,34 @@ new_row.insert(0, 'decile', 'Tout')
 df = pd.concat([df, new_row], ignore_index=True) # Ajoutez le DataFrame r2_cs au DataFrame r2_cs_decile en utilisant "Tour" comme index.
 
 
-fig, ax = plt.subplots(figsize=(12, 6))
+
+fig, ax = plt.subplots(figsize=(10, 5))
 
 ax.axis('tight')
 ax.axis('off')
 
-# S'assurer que les entiers restent entiers
+# s'assurer que les entiers restent entiers
 cellText = []
 for row in df.itertuples(index=False):
     formatted_row = [f"{x:.3f}" if isinstance(x, float) else f"{x}" for x in row]
     cellText.append(formatted_row)
 
-# Créer le tableau
+# Créer table
 table = ax.table(cellText=cellText, colLabels=df.columns, cellLoc='center', loc='center')
 
-# Ajuster la mise en page du tableau
+
+plt.subplots_adjust(top=0.85)
+
+
+plt.suptitle('R2_CS pour les  portefeuilles de déciles triés par momentum avec différents groupes macro', fontsize=12, y=0.85)
+
 table.auto_set_font_size(False)
-table.set_fontsize(10)
-table.scale(1.2, 2)  # Agrandir la taille du tableau
+for key, cell in table.get_celld().items():
+    if key[0] == 0:  
+        cell.set_fontsize(10)
+    else:
+        cell.set_fontsize(9)
 
-# Ajuster les marges autour du tableau
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)
-
-plt.suptitle('R2_CS: portefeuilles de déciles triés par momentum', fontsize=12, y=0.85)
-
-plt.savefig('final_results/figs/R2_CS portefeuilles de deciles tries par momentum.jpg', bbox_inches='tight')
+plt.savefig('final_results/figs/R2_CS pour les  portefeuilles de déciles triés par momentum avec différents groupes macro.jpg', bbox_inches='tight')
 
 plt.show()
