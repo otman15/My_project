@@ -62,7 +62,7 @@ def plot_macro_probs(paths, save=False, lag ='sans auto_regression'):
     plt.tight_layout()
 
     if save:
-        plt.savefig('final_results/figs/macro_prob_'+ lag +'.png')
+        plt.savefig('final_results/figs/macro_prob '+ lag +'.png')
     
     plt.show()
 
