@@ -28,7 +28,7 @@ plot_macro_probs([('macro_probabilities/macro_tr_prob_sans_retard.pkl', 'macro_p
 
 
 
-################# Obtenez les données de test et les prédictions, puis effectuez les calculs nécessaires. ###################################"
+################# Obtenir les données de test et les prédictions, puis effectuez les calculs nécessaires. ###################################"
 train_tmp_path = "datasets/char/Char_train.npz"
 test_tmp_path  = "datasets/char/Char_test.npz"
 valid_tmp_path = "datasets/char/Char_valid.npz" 
@@ -99,6 +99,7 @@ if None in sharps:
 
 # Create a DataFrame from the dictionary
 df = pd.DataFrame(list(sharps.items()), columns=['groupe macro', 'sharpe'])
+df = df.sort_values(by='sharpe',ascending=False)
 df = df.round(decimals=3)
 fig, ax = plt.subplots()
 
@@ -113,7 +114,7 @@ table = ax.table(cellText=df.values, colLabels=df.columns, cellLoc='center', loc
 plt.subplots_adjust(top=0.9)
 
 # Add title to the table
-plt.suptitle('Ratio de sharpe OOS L_C portf', fontsize=12, y=0.85)
+#plt.suptitle('Ratio de sharpe OOS L_C portf', fontsize=12, y=0.85)
 
 plt.savefig('final_results/figs/Table_ratios_de_sharpe.jpg', bbox_inches='tight')
 
@@ -153,7 +154,7 @@ df = pd.concat([df, new_row], ignore_index=True) # Ajoutez le DataFrame r2_cs au
 
 
 
-fig, ax = plt.subplots(figsize=(10, 5))
+fig, ax = plt.subplots(figsize=(11, 6))
 
 ax.axis('tight')
 ax.axis('off')
@@ -168,18 +169,18 @@ for row in df.itertuples(index=False):
 table = ax.table(cellText=cellText, colLabels=df.columns, cellLoc='center', loc='center')
 
 
-plt.subplots_adjust(top=0.85)
+plt.subplots_adjust(top=0.95)
 
 
-plt.suptitle('R2_CS pour les  portefeuilles de déciles triés par momentum avec différents groupes macro', fontsize=12, y=0.85)
+#plt.suptitle('R2_CS pour les  portefeuilles de déciles triés par momentum avec différents groupes macro', fontsize=12, y=0.85)
 
 table.auto_set_font_size(False)
 for key, cell in table.get_celld().items():
     if key[0] == 0:  
-        cell.set_fontsize(10)
+        cell.set_fontsize(9)
     else:
         cell.set_fontsize(9)
 
-plt.savefig('final_results/figs/R2_CS pour les  portefeuilles de déciles triés par momentum avec différents groupes macro.jpg', bbox_inches='tight')
+plt.savefig('final_results/figs/R2_CS,portefeuilles de deciles tries par momentum.jpg', bbox_inches='tight')
 
 plt.show()

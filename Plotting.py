@@ -104,12 +104,12 @@ def plot_L_S_portf_ret(ls_returns, macro_groupe, save = False):
     
     plt.scatter(cumulative_returns.index, cumulative_returns/cumulative_returns.std(), s = 10, label='Long-Short Portfolio')
     
-    plt.title('Rendements cumulatifs du portefeuille long-court, ' + 'macro groupe:' + macro_groupe)
+    #plt.title('Rendements cumulatifs du portefeuille long-court, ' + 'macro groupe:' + macro_groupe)
     plt.xlabel('Temps')
     plt.ylabel('Rendement Cumulatif')
     plt.legend(title='portefeuille LC')
     plt.grid(True)
-    if save: plt.savefig('plots/'+'Rendements cumulatifs du portefeuille long-short'+macro_groupe+'.pdf') 
+    if save: plt.savefig('plots/'+'Rendements cumulatifs du portefeuille long-short'+macro_groupe+'.jpg') 
     plt.show()
     
     
@@ -139,7 +139,7 @@ def long_and_short(long_returns, short_returns,long_short_returns,macro_groupe, 
     plt.ylabel('Rendement Cumulatif')
     plt.legend(title='portefeuilles')
     plt.grid(True)
-    if save: plt.savefig('plots/'+'Rendements cumulatifs des portefeuilles long et court'+macro_groupe+'.pdf') 
+    if save: plt.savefig('plots/'+'Rendements cumulatifs des portefeuilles long et court'+macro_groupe+'.jpg') 
     plt.show()
     
     
@@ -155,7 +155,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
     ncols = 3
     nrows =  (n + 1) // ncols  # Ensures enough rows for all plots
 
-    fig, axs = plt.subplots(nrows, ncols, figsize=(14, 8 * nrows))
+    fig, axs = plt.subplots(nrows, ncols, figsize=(14, 7 * nrows))
     axs = axs.flatten()  # Flatten the array of axes for easy iteration
 
     for i, (potf_ret, macro_groupe) in enumerate(zip(potf_ret_list, macro_group_list)):
@@ -167,7 +167,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
             s_cumsum = s.cumsum()
             axs[i].scatter(s_cumsum.index, s_cumsum , s=10, label=decile)
 
-        axs[i].set_title('Rendements Cumulatifs, ' + ' \n macro group: ' +  str(macro_groupe), fontsize=15)
+        axs[i].set_title('groupe macro: ' +  str(macro_groupe), fontsize=15)
         axs[i].set_xlabel('Temps', fontsize=8)
         axs[i].set_ylabel('Rendement cumulatif basé sur les prédictions de rendement', fontsize=8)
         axs[i].legend(title='Portefeuilles déciles',title_fontsize=10, fontsize=8)
@@ -180,7 +180,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
     plt.tight_layout()
 
     if save:
-        fig.savefig('final_results/figs/Rendements cumulatifs des portefeuilles déciles triés en fonction des prédictions de rendement.pdf')
+        fig.savefig('final_results/figs/Rendements cumulatifs des portefeuilles déciles triés en fonction des prédictions de rendement.jpg')
 
     plt.show()
 
@@ -214,14 +214,14 @@ def plot_multi_L_S_portf_ret(ls_returns_list, macro_group_list, save=False):
                  markersize=2, 
                  label=f'{macro_group}')
 
-  plt.title('Rendements cumulatifs des portefeuilles long-courts',fontsize=10)
+  #plt.title('Rendements cumulatifs des portefeuilles long-courts',fontsize=10)
   plt.xlabel('Temps')
   plt.ylabel('Rendement Cumulatif')
   plt.legend(title='groupe of macro', title_fontsize=10, fontsize=9)
   plt.grid(True)
 
   if save:
-      plt.savefig('final_results/figs//Rendements cumulatifs des différents portefeuilles long-courts.pdf')
+      plt.savefig('final_results/figs//Rendements cumulatifs des différents portefeuilles long-courts.png')
 
   plt.show()
     
