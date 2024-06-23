@@ -101,7 +101,7 @@ if None in sharps:
 df = pd.DataFrame(list(sharps.items()), columns=['groupe macro', 'sharpe'])
 df = df.sort_values(by='sharpe',ascending=False)
 df = df.round(decimals=3)
-fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots()
 
 # Hide axes
 ax.axis('tight')
