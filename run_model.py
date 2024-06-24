@@ -89,12 +89,12 @@ def run_all(save=False, Pause = True):
         print("running Hamilton filter")
         run_Hamilton_filter()
     else:
-        print("Probabilities file already exists, execute run_Hamilton_filter() if you want to get and write prob again")
+        print("Le fichier contenant les probabilités de régimes existe déja, executer run_Hamilton_filter() pour l'écrire de nouveau")
        
     
-    groupes = ['Production_Revenus', 'Marche_de_travail', 'Logement','Conso_Ordres' , 
-               'Monnaie_credit', 'Taux_interet_change', 'Prix', 'Marches_Boursiers', 'Autres',
-               'Toutes_vars', None,'Tous_groupes']
+    groupes = ['Prix', 'Monnaie_credit','Production_Revenus', 'Marche_de_travail', 'Logement',
+               'Conso_Ordres' , 'Taux_interet_change', 'Marches_Boursiers', 'Autres',
+               'Toutes_vars', 'Tous_groupes',None]
     
     
     char_paths =("datasets/char/Char_train.npz", "datasets/char/Char_valid.npz" , "datasets/char/Char_test.npz")
@@ -107,7 +107,7 @@ def run_all(save=False, Pause = True):
     i = 1
     for groupe in groupes:
         print('\n')
-        print("groupe:",i)
+        print("groupe ",i, ' :', groupe)
         start_time = time.time()
         seed = 991585 
         torch.manual_seed(seed)

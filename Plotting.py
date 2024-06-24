@@ -153,7 +153,7 @@ def plot_multi_dec_port_basedOn_pred_ret(potf_ret_list, macro_group_list, save=F
 
     # Calculate the number of rows and columns for the subplots
     ncols = 3
-    nrows =  (n + 1) // ncols  # Ensures enough rows for all plots
+    nrows =  (n + 2) // ncols  # Ensures enough rows for all plots!!!!2 1!!!!!!!!!!!!!!!!
 
     fig, axs = plt.subplots(nrows, ncols, figsize=(14, 7 * nrows))
     axs = axs.flatten()  # Flatten the array of axes for easy iteration

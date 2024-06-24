@@ -20,7 +20,7 @@ def long_short_portfolio(pred, R, mask, low=0.1, high=0.1, normalize=True):
     
     R_mask = R[mask]
     N_i = np.sum(mask.astype(int), axis=1) # nombre d'actifs par mois
-    N_i_cumsum = np.cumsum(N_i) # nombre cumulatif d'actifs par mois:  where the pred will be split
+    N_i_cumsum = np.cumsum(N_i) # nombre cumulatif d'actifs par mois:  indices pour repérer ou on va appliquer split
     w_split = np.split(pred, N_i_cumsum)[:-1] # liste : predictions présents  pour chaque mois
     R_split = np.split(R_mask, N_i_cumsum)[:-1] # observations présentes pour chaque mois
 
@@ -134,65 +134,16 @@ def R2(R, residual, cross_sectional=False):
   
 
 
-# Explained variance, Cross_sect_R2, CS_R2 pondéré    
-def calculateStatistics(w, I, R, mask):
-	R_hat, residual, mask, R = decomposeReturn(w,  R, mask)
-                                                                                                                                                            
-	T_i = np.sum(mask, axis=0)
-	N_t = np.sum(mask, axis=1)
-	stat1 = 1 - np.mean(np.square(residual).sum(axis=1) / N_t) / np.mean(np.square(R * mask).sum(axis=1) / N_t) # EV
-	stat2 = 1 - np.mean(np.square(residual.sum(axis=0) / T_i)) / np.mean(np.square((R * mask).sum(axis=0) / T_i)) # XS-R2
-	stat3 = 1 - np.mean(np.square(residual.sum(axis=0) / T_i) * T_i) / np.mean(np.square((R * mask).sum(axis=0) / T_i) * T_i) # XS-R2 pondéré
-	return stat1, stat2, stat3
-##############################################################################################
-
-
-
-def decomposeReturn(w, R, mask):
-
-    R_reshape = R[mask]
-    #sum numper of assets per month
-    splits = np.sum(mask, axis=1).cumsum()[:-1]
-    w_list = np.split(w, splits)
-    R_list = np.split(R_reshape, splits)
-    R_hat_list = []
-    residual_list = []
-  
-    for R_i, w_i in zip(R_list, w_list):
-  			
-  			residual_i = R_i - w_i
-  			R_hat_list.append(w_i)
-  			residual_list.append(residual_i)
-      
-  
-    R_hat = np.zeros_like(mask, dtype=float)
-    residual = np.zeros_like(mask, dtype=float)
-    R_hat[mask] = np.concatenate(R_hat_list)
-    residual[mask] = np.concatenate(residual_list)
-    return R_hat, residual, mask, R
-
-###################################################################################################"
-    
-    
-def UnexplainedVariation(R, residual):
-   return np.mean(np.square(residual)) / np.mean(np.square(R))   
-
-
-def FamaMcBethAlpha(residual):
-	return np.sqrt(np.mean(np.square(residual.mean(axis=0))))
-
-
-
 # Calculer les statistics de portfeuilles de déciles trié on se basant sur une charactéristique: char_masked
 def DecileStatistics(char_masked, R, pred, mask, decile=10):
     
     R = R[mask]
 
-    # Calculer splits et split R, pred, et char_masked 
+    # Calculer splits , R_split, pred, et char_masked 
     splits = np.cumsum(np.sum(mask, axis=1))[:-1]
     R_split, pred_split, char_split = np.split(R, splits), np.split(pred, splits), np.split(char_masked, splits)
 
-    # resultats de décile s
+    # resultats de décile 
     R_decile = np.zeros((mask.shape[0], decile))
     pred_decile = np.zeros((mask.shape[0], decile))
 
@@ -206,22 +157,20 @@ def DecileStatistics(char_masked, R, pred, mask, decile=10):
             R_decile[month, i] = np.mean([x[0] for x in group])
             pred_decile[month, i] = np.mean([x[1] for x in group])
 
-    # calcul residus
+   
+    R2_CS,R2_CS_decile = CS_R2_decile(R_decile, pred_decile)
+
+    return R2_CS, R2_CS_decile
+
+
+
+def CS_R2_decile(R_decile, pred_decile):
+    decile = R_decile.shape[1]
     residual_decile = R_decile - pred_decile
-
-    # calcul statistics pour chaque decile
-    UV_decile = np.array([UnexplainedVariation(R_decile[:, i], residual_decile[:, i]) for i in range(decile)])
-    Alpha_decile = np.array([FamaMcBethAlpha(residual_decile[:, i]) for i in range(decile)])
     R2_CS_decile = np.array([R2(R_decile[:, i], residual_decile[:, i], cross_sectional=True) for i in range(decile)])
-
-    # calcul stat global
-    UV = UnexplainedVariation(R_decile, residual_decile)
-    Alpha = FamaMcBethAlpha(residual_decile)
     R2_CS = R2(R_decile, residual_decile, cross_sectional=True)
-
-    return UV, Alpha, R2_CS, UV_decile, Alpha_decile, R2_CS_decile
-
-
+    
+    return R2_CS,R2_CS_decile
 
     
     

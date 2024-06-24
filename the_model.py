@@ -132,8 +132,8 @@ class FFN_1(nn.Module):
             
             sharp_train = sharp(Ytr_pred.detach().cpu().numpy(),YT,mask_tr)
             sharp_valid = sharp(Y_pred_val.detach().cpu().numpy(), YV, mask_val)
-            r2_train = R2(YT[mask_tr], YT[mask_tr]- Ytr_pred.detach().cpu().numpy(),cross_sectional=False)
-            r2_val = R2(YV[mask_val], YV[mask_val] - Y_pred_val.detach().cpu().numpy(),cross_sectional=False)
+            r2_train = R2(YT[mask_tr], YT[mask_tr]- Ytr_pred.detach().cpu().numpy(),cross_sectional=True)
+            r2_val = R2(YV[mask_val], YV[mask_val] - Y_pred_val.detach().cpu().numpy(),cross_sectional=True)
 
             
                             
