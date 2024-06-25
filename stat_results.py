@@ -1,3 +1,6 @@
+
+   
+
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun  3 16:32:53 2024
@@ -6,7 +9,7 @@ Created on Mon Jun  3 16:32:53 2024
 """
 
 import pickle
-from util import sharp, decile_portfolios,long_short_portfolio,DecileStatistics, CS_R2_decile,R2
+from util import sharp, decile_portfolios,long_short_portfolio,DecileStatistics, CS_R2_decile,R2,calculateXSR2
 from Load_data import Load_data
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -40,22 +43,22 @@ groupes = ['Toutes_vars', 'Tous_groupes','Marche_de_travail', 'Production_Revenu
    
 
 
-decile_portf_on_ret = {}
-decile_portf_on_ret_pred = {}
-ls_returns = {}
+decile_portf_on_ret = {} # dict pour le rendement des portfeuilles de déciles triés par pred de rendt, pour chaque groupe macro a part
+decile_portf_on_ret_pred = {} # dict pour la prediction du rendement ....
+ls_returns = {} # dict pour le rendement du potefuille long court par groupe
 
-stat_sorted_mom = {}
-stat_sorted_size = {}
+CSR2_mom = {}  # pour le CS R2 des rendements des portfeuilles triés par moment
+CSR2_size = {} # .................................................par size
 momentum_sorting = 'r12_2' # Pour trier les portefeuilles en se basant sur le moment
 size_sorting = 'LME' # Pour trier les portefeuilles en se basant sur le moment
 
-sharps_test = {}
-sharps_val = {}
-sharps_train = {}
+sharps_test = {} # pour le sharp des portefuille long court 
+sharps_val = {}   # pour le sharp des portefuille long court
+sharps_train = {}  # pour le sharp des portefuille long court
 
-CS_R2_tr = {}
-CS_R2_test = {}
-CS_R2_val = {}
+CS_R2_tr = {} # CR R2 des predictions de rendements des actif entrainement
+CS_R2_test = {} # CR R2 des predictions de rendements des actif test
+CS_R2_val = {} # CR R2 des predictions de rendements des actif validation
 
 
 
@@ -65,19 +68,23 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 for groupe in groupes:
+    
       data = Load_data(train_tmp_path, test_tmp_path, valid_tmp_path,macro_paths, groupe)
       Xtest, Ytest, mask_test = data.get_test()
       Xtrain, Ytrain, mask_train = data.get_train()
       Xval, Yval, mask_val = data.get_val()     
       char_names = data.get_var_names()
       
+      
       model_params = {'feature_dim':Xtest.shape[-1],
                       "num_epochs": 2000,'dropout':0.5,                                
                       "learning_rate": 0.001,
                       'layer_sizes': [64, 32, 16, 8]}
-      model = FFN_1(model_params).to(device)
-      model.eval()
+      model = FFN_1(model_params).to(device)      
       model.load_state_dict(torch.load(f'final_results/best_params/{groupe}_best_params.pth'))
+      model.eval()
+      
+      
       
       pred_train = model(torch.tensor(Xtrain, dtype=torch.float).to(device)).detach().cpu().numpy()
       pred_val = model(torch.tensor(Xval, dtype=torch.float).to(device)).detach().cpu().numpy()
@@ -91,9 +98,9 @@ for groupe in groupes:
       
       
       
-      CS_R2_tr[groupe]   = R2(Ytrain[mask_train], Ytrain[mask_train] - pred_train,cross_sectional=True)
-      CS_R2_val[groupe]  = R2(Yval[mask_val],   Yval[mask_val] - pred_val,cross_sectional=True)
-      CS_R2_test[groupe] = R2(Ytest[mask_test], Ytest[mask_test] - pred_test,cross_sectional=True)
+      CS_R2_tr[groupe]   = calculateXSR2(pred_train,  Ytrain, mask_train)
+      CS_R2_val[groupe]  = calculateXSR2(pred_val,  Yval, mask_val)
+      CS_R2_test[groupe] = calculateXSR2(pred_test,  Ytest, mask_test)
       
       
       decile_portf_on_ret[groupe],decile_portf_on_ret_pred[groupe] = decile_portfolios(pred_test, Ytest, mask_test, deciles=10)
@@ -103,16 +110,13 @@ for groupe in groupes:
       char_mask_test_mom = Xtest[:,var2idx[momentum_sorting]]
       char_mask_test_size = Xtest[:,var2idx[size_sorting]]
       
-      stat_sorted_mom[groupe] = DecileStatistics(char_mask_test_mom, Ytest, pred_test, mask_test, decile=10)
-      stat_sorted_size[groupe] = DecileStatistics(char_mask_test_size, Ytest, pred_test, mask_test, decile=10)
+      CSR2_mom[groupe] = DecileStatistics(char_mask_test_mom, Ytest, pred_test, mask_test, decile=10)
+      CSR2_size[groupe] = DecileStatistics(char_mask_test_size, Ytest, pred_test, mask_test, decile=10)
       
     
       del data, Xtest, mask_test, Ytest, pred_test
       
       
-   
-
-
 ###################################### portf decile  basé sur pred de rend ############################################################
 
 potf_ret_list = list(decile_portf_on_ret.values())
@@ -225,9 +229,9 @@ plt.savefig('final_results/figs/Table_ratios_de_sharpe.jpg', bbox_inches='tight'
 R2_CS_m = {}
 R2_CS_decile_m={}
 
-for group in stat_sorted_mom.keys(): #  r2_cs et r2_cs_decile
-  R2_CS_m[group] =stat_sorted_mom[group][0]
-  R2_CS_decile_m[group]=stat_sorted_mom[group][1]
+for group in CSR2_mom.keys(): #  r2_cs et r2_cs_decile
+  R2_CS_m[group] =CSR2_mom[group][0]
+  R2_CS_decile_m[group]=CSR2_mom[group][1]
 
 #############################################################
 old_keys = list(R2_CS_m.keys())
@@ -294,9 +298,9 @@ plt.show()
 R2_CS = {}
 R2_CS_decile={}
 
-for group in stat_sorted_size.keys(): #  r2_cs et r2_cs_decile
-  R2_CS[group] =stat_sorted_size[group][0]
-  R2_CS_decile[group]=stat_sorted_size[group][1]
+for group in CSR2_size.keys(): #  r2_cs et r2_cs_decile
+  R2_CS[group] =CSR2_size[group][0]
+  R2_CS_decile[group]=CSR2_size[group][1]
 
 #############################################################"
 

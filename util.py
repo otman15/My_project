@@ -9,8 +9,7 @@ Ces fonctions sont destinées à calculer les différentes statistics en se basa
 La construction des portfeuilles suit la même technique utlisée par Chen et al. (2023)
 """
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 
 
@@ -173,4 +172,35 @@ def CS_R2_decile(R_decile, pred_decile):
     return R2_CS,R2_CS_decile
 
     
+
+#  Cross_sect_R2 des données reconstruite (reshaped)
+def calculateXSR2(pred, R, mask):
     
+	R_hat, residual, mask, R = reshape_return(pred,  R, mask)                                                                                                                                                          
+	T_i = np.sum(mask, axis=0)	
+	XS_R2 = 1 - np.mean(np.square(residual.sum(axis=0) / T_i)) / np.mean(np.square((R * mask).sum(axis=0) / T_i)) # XS-R2
+	
+	return XS_R2
+##############################################################################################
+
+
+
+def reshape_return(pred, R, mask):
+
+    R_reshape = R[mask]
+    #sum numper of assets per month
+    splits = np.sum(mask, axis=1).cumsum()[:-1]
+    pred_list = np.split(pred, splits)
+    R_list = np.split(R_reshape, splits)
+    
+    residual_list = []
+  
+    for R_i, pred_i in zip(R_list, pred_list):		
+  			residual_list.append(R_i - pred_i)
+      
+  
+    R_hat = np.zeros_like(mask, dtype=float)
+    residual = np.zeros_like(mask, dtype=float)
+    R_hat[mask] = np.concatenate(pred_list)
+    residual[mask] = np.concatenate(residual_list)
+    return R_hat, residual, mask, R 
