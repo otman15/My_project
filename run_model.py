@@ -92,9 +92,9 @@ def run_all(save=False, Pause = True):
         print("Le fichier contenant les probabilités de régimes existe déja, executer run_Hamilton_filter() pour l'écrire de nouveau")
        
     
-    groupes = ['Prix', 'Monnaie_credit','Production_Revenus', 'Marche_de_travail', 'Logement',
-               'Conso_Ordres' , 'Taux_interet_change', 'Marches_Boursiers', 'Autres',
-               'Toutes_vars', 'Tous_groupes',None]
+    groupes = [None,'Toutes_vars', 'Tous_groupes','Prix', 'Monnaie_credit','Production_Revenus',
+               'Marche_de_travail', 'Logement', 'Conso_Ordres' , 'Taux_interet_change',
+               'Marches_Boursiers', 'Autres'   ]
     
     
     char_paths =("datasets/char/Char_train.npz", "datasets/char/Char_valid.npz" , "datasets/char/Char_test.npz")
@@ -133,7 +133,7 @@ def run_all(save=False, Pause = True):
 
 
 
-run_all(save=True)
+run_all(save=False)
 
 
 

@@ -70,7 +70,7 @@ class FFN_1(nn.Module):
         
         self.best_val_loss = float('inf')
         patience=0
-        optimizer = optim.AdamW(model.parameters(), lr=model_params['learning_rate'], betas=(0.9, 0.99),weight_decay=0.0001) ####0.001#############
+        optimizer = optim.AdamW(model.parameters(), lr=model_params['learning_rate'], betas=(0.9, 0.99),weight_decay=0.0001) ####0.0001#############
 
         
         XV, YV, mask_val = valid_data
