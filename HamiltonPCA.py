@@ -334,7 +334,7 @@ class Group_macro_Pca:
 
         #groupr6  = data1.columns[76:97]
 
-        interest_exchange_r6 = ['FEDFUNDS', 'CP3Mx', 'TB3MS', 'TB6MS', 'GS1', 'GS5', 'GS10', 'AAA',
+        Taux_interet_change = ['FEDFUNDS', 'CP3Mx', 'TB3MS', 'TB6MS', 'GS1', 'GS5', 'GS10', 'AAA',
                'BAA', 'COMPAPFFx', 'TB3SMFFM', 'TB6SMFFM', 'T1YFFM', 'T5YFFM',
                'T10YFFM', 'AAAFFM', 'BAAFFM', 'EXSZUSx', 'EXJPUSx', 'EXUSUKx',
                'EXCAUSx']
@@ -359,7 +359,7 @@ class Group_macro_Pca:
             'Logement': self.data1[Logement3],
             'Conso_Ordres': self.data1[Conso_Ordres4],
             'Monnaie_credit': self.data1[Monnaie_credit5],
-            'Taux_interet_change': self.data1[interest_exchange_r6],
+            'Taux_interet_change': self.data1[Taux_interet_change],
             'Prix': self.data1[Prix7],
             'Marches_Boursiers': self.data1[Marches_Boursiers8],
             'Autres': self.data1.iloc[:,125:],
