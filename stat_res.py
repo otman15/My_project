@@ -1,10 +1,6 @@
-
-   
-
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun  3 16:32:53 2024
-
 @author: Otman CH
 """
 
@@ -38,7 +34,7 @@ macro_paths = ('macro_probabilities/macro_tr_prob_sans_retard.pkl','macro_probab
   
 groupes = ['Toutes_vars', 'Tous_groupes','Marche_de_travail', 'Production_Revenus',  'Logement',
            'Conso_Ordres',  'Taux_interet_change', 'Marches_Boursiers', 'Prix', 'Monnaie_credit',
-           'Autres', None]
+           'Welch_indicators', None]
 
    
 
@@ -235,7 +231,7 @@ for group in CSR2_mom.keys(): #  r2_cs et r2_cs_decile
 
 #############################################################
 old_keys = list(R2_CS_m.keys())
-new_keys = {'Toutes_vars': 'Ttes_vars','Tous_groupes':'ts_gp','Marche_de_travail':'Mr Tv', 'Logement':'Lgm', 'Conso_Ordres':'Cons Ord', 'Monnaie_credit':'Mn Cr', 'Taux_interet_change':'Int Ch', 'Prix':'Prix', 'Marches_Boursiers':'Mr Brs', 'Autres':'Autres',None:'Sans Mac', 'Production_Revenus':'Pr Rev'}
+new_keys = {'Toutes_vars': 'Ttes_vars','Tous_groupes':'ts_gp','Marche_de_travail':'Mr Tv', 'Logement':'Lgm', 'Conso_Ordres':'Cons Ord', 'Monnaie_credit':'Mn Cr', 'Taux_interet_change':'Int Ch', 'Prix':'Prix', 'Marches_Boursiers':'Mr Brs', 'Welch_indicators':'W_ind',None:'Sans Mac', 'Production_Revenus':'Pr Rev'}
 
 for old in old_keys:
    R2_CS_decile_m[new_keys[old]] = R2_CS_decile_m.pop(old)
@@ -306,7 +302,7 @@ for group in CSR2_size.keys(): #  r2_cs et r2_cs_decile
 
 #############################################################
 old_keys = list(R2_CS.keys())
-new_keys = {'Toutes_vars': 'Ttes_vars','Tous_groupes':'ts_gp','Marche_de_travail':'Mr Tv', 'Logement':'Lgm', 'Conso_Ordres':'Cons Ord', 'Monnaie_credit':'Mn Cr', 'Taux_interet_change':'Int Ch', 'Prix':'Prix', 'Marches_Boursiers':'Mr Brs', 'Autres':'Autres',None:'Sans Mac', 'Production_Revenus':'Pr Rev'}
+new_keys = {'Toutes_vars': 'Ttes_vars','Tous_groupes':'ts_gp','Marche_de_travail':'Mr Tv', 'Logement':'Lgm', 'Conso_Ordres':'Cons Ord', 'Monnaie_credit':'Mn Cr', 'Taux_interet_change':'Int Ch', 'Prix':'Prix', 'Marches_Boursiers':'Mr Brs', 'Welch_indicators':'W_I',None:'Sans Mac', 'Production_Revenus':'Pr Rev'}
 
 for old in old_keys:
    R2_CS_decile[new_keys[old]] = R2_CS_decile.pop(old)

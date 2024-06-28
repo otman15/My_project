@@ -303,11 +303,12 @@ class Group_macro_Pca:
         self.data_dict = self.group()
 
         self.groups = ['Production_Revenus', 'Marche_de_travail', 'Logement','Conso_Ordres' , 'Monnaie_credit',
-                       'Taux_interet_change', 'Prix', 'Marches_Boursiers', 'Autres', 'Toutes_vars']
+                       'Taux_interet_change', 'Prix', 'Marches_Boursiers','Cross_sec_med_char',
+                       'Welch_indicators','Toutes_vars']
 
     def group(self):
         #group1 = data1.columns[1:20]
-        Production_Revenus1 = ['RPI', 'W875RX1', 'INDPRO', 'IPFPNSS',  'IPFINAL','IPCONGD', 'IPDCONGD', 'IPNCONGD', \
+        Production_Revenus1 = ['RPI', 'W875RX1', 'INDPRO', 'IPFPNSS',  'IPFINAL','IPCONGD', 'IPDCONGD', 'IPNCONGD', 
                         'IPBUSEQ',  'IPMAT','IPDMAT', 'IPNMAT', 'IPMANSICS', 'IPB51222S',  'IPFUELS', 'CUMFNS']
 
         #group2_names = data1.columns[20:48]
@@ -350,6 +351,16 @@ class Group_macro_Pca:
         #group8 = data1.columns[72:76]
 
         Marches_Boursiers8 = ['S&P 500', 'S&P: indust', 'S&P div yield', 'S&P PE ratio','VXOCLSx']
+        
+        Cross_sec_med_char = [
+                    'A2ME', 'AC', 'AT', 'ATO', 'BEME', 'Beta', 'C', 'CF', 'CF2P', 'CTO', 'D2A', 'D2P',
+                    'DPI2A', 'E2P', 'FC2Y', 'IdioVol', 'Investment', 'Lev', 'LME', 'LT_Rev', 'LTurnover', 
+                    'MktBeta', 'NI', 'NOA', 'OA', 'OL', 'OP', 'PCM', 'PM', 'PROF', 'Q', 'r2_1', 'r12_2', 
+                    'r12_7', 'r36_13', 'Rel2High', 'Resid_Var', 'RNA', 'ROA', 'ROE', 'S2P', 'SGA2S', 
+                    'Spread', 'ST_REV', 'SUV', 'Variance'
+                ]
+
+        Welch_indicators = [ 'dp', 'ep', 'b/m', 'ntis', 'tbl', 'tms', 'dfy', 'svar']
 
 
 
@@ -362,8 +373,9 @@ class Group_macro_Pca:
             'Taux_interet_change': self.data1[Taux_interet_change],
             'Prix': self.data1[Prix7],
             'Marches_Boursiers': self.data1[Marches_Boursiers8],
-            'Autres': self.data1.iloc[:,125:],
-            'Toutes_vars': self.data1.iloc[:,1:]
+            'Cross_sec_med_char': self.data1[Cross_sec_med_char],
+            'Welch_indicators': self.data1[Welch_indicators],
+            'Toutes_vars': self.data1.drop(columns=Cross_sec_med_char).iloc[:,1:] # ne pas inclure les chars
 
         }
 
@@ -455,7 +467,7 @@ class Macro_group_probs:
             all_test = []
             for gr in data_pca_tr.keys():
                 
-              if gr != 'Toutes_vars': 
+              if (gr != 'Toutes_vars') and (gr != 'Cross_sec_med_char'): 
                 all_tr.append(data_pca_tr[gr])
                 all_test.append(data_pca_test[gr])
                 
